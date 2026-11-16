@@ -151,6 +151,8 @@ export class Player {
     const ang = Math.atan2(fromX - this.pos.x, fromZ - this.pos.z) - (this.yaw + Math.PI);
     this.game.events.emit('damage', { amount: dmg, angle: ang, kind });
     this.game.audio.play(kind === 'blast' ? 'hurtBlast' : 'hurt');
+    // Your own voice, some of the time.
+    if (this.game.audio.has('pain') && Math.random() < 0.4) this.game.audio.play('pain', { vol: 0.45, delay: 0.04 });
     if (this.health <= 0) {
       this.health = 0;
       this.alive = false;

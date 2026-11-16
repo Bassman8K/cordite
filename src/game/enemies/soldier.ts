@@ -129,6 +129,9 @@ const v = new THREE.Vector3();
 
 export class Enemy {
   readonly id = nextId++;
+  /** Playback rate of this soldier's voice, so a squad does not all sound like one man. */
+  readonly voice = 0.9 + ((this.id * 0.6180339887) % 1) * 0.2;
+  private lastPain = -9;
   readonly arch: Archetype;
   readonly weapon: WeaponDef;
   readonly mesh: THREE.SkinnedMesh;
@@ -298,6 +301,14 @@ export class Enemy {
       this.die(fromX, fromZ, blast);
       return true;
     }
+    // Hit but alive: he cries out, and a badly hurt man calls for help.
+    const now = this.game.engine.time;
+    if (now - this.lastPain > 0.9 && Math.random() < 0.75) {
+      this.lastPain = now;
+      const audio = this.game.audio;
+      audio.play(audio.has('pain') ? 'pain' : 'grunt', { x: this.pos.x, y: this.pos.y + 1.5, z: this.pos.z, ref: 10, vol: 0.9, rate: this.voice });
+      if (this.hp < a.hp * 0.4 && Math.random() < 0.35) this.game.enemies.shout(this, true, ['medic', 'cover_me']);
+    }
     if (byPlayer) {
       const p = this.game.player.pos;
       this.enterCombat(p.x, p.y, p.z, false, 0.15);
@@ -323,7 +334,9 @@ export class Enemy {
 
   /** A round passed close by. */
   suppressBy(amount: number): void {
+    const before = this.suppress;
     this.suppress = Math.min(1.4, this.suppress + amount);
+    if (before < 0.8 && this.suppress >= 0.8 && this.alive && Math.random() < 0.3) this.game.enemies.shout(this, false, ['get_down', 'look_out', 'suppressing_fire']);
     if (this.state !== 'combat' && this.alive) {
       const p = this.game.player.pos;
       this.enterCombat(p.x, p.y, p.z, false, rand(0.3, 0.7));
@@ -348,7 +361,7 @@ export class Enemy {
       this.deathVZ = (dz / d) * rand(3, 6);
       this.deathVY = rand(3, 5);
     }
-    g.audio.play('grunt', { x: this.pos.x, y: this.pos.y + 1.4, z: this.pos.z, ref: 6, vol: 0.8 });
+    g.audio.play(g.audio.has('death') && Math.random() < 0.8 ? 'death' : 'grunt', { x: this.pos.x, y: this.pos.y + 1.4, z: this.pos.z, ref: 11, vol: 0.9, rate: this.voice });
     g.audio.play('bodyfall', { x: this.pos.x, y: this.pos.y, z: this.pos.z, ref: 5, delay: 0.35 });
     g.onEnemyKilled(this);
   }
@@ -500,6 +513,7 @@ export class Enemy {
       const ang = Math.atan2(this.pos.x - tx, this.pos.z - tz) + (Math.random() < 0.5 ? -1 : 1) * rand(0.8, 1.5);
       const r = rPref * rand(0.7, 1.1);
       this.action = 'flank';
+      if (Math.random() < 0.35) this.game.enemies.shout(this, false, ['go_go_go', 'cover_me', 'watch_my_back']);
       this.goTo(tx + Math.sin(ang) * r, tz + Math.cos(ang) * r);
       this.actionT = rand(4, 7);
     } else {
@@ -512,6 +526,7 @@ export class Enemy {
         this.actionT = rand(5, 10);
       } else {
         this.action = 'hold';
+        if (Math.random() < 0.15) this.game.enemies.shout(this, false, ['hold', 'suppressing_fire']);
         this.goal = null;
         this.actionT = rand(1.5, 3.5);
       }
@@ -626,7 +641,7 @@ export class Enemy {
     const ox = this.pos.x - Math.sin(this.yaw) * 0.4;
     const oz = this.pos.z - Math.cos(this.yaw) * 0.4;
     g.combat.throwItem(getWeapon('rgd5'), ox, this.pos.y + 1.55, oz, dx / t + rand(-0.6, 0.6), (dy + 0.5 * 9.81 * t * t) / t, dz / t + rand(-0.6, 0.6), false, this);
-    g.enemies.shout(this, true);
+    g.enemies.shout(this, true, ['fire_in_the_hole']);
     this.flinch = 0.5;
   }
 
@@ -840,7 +855,7 @@ export class Enemy {
       this.reloadT = Math.min(5, w.reload) * 1.15;
       this.burstLeft = 0;
       this.burstCool = 0.3;
-      if (Math.random() < 0.3) g.enemies.shout(this);
+      if (Math.random() < 0.55) g.enemies.shout(this, false, ['reloading', 'cover_me']);
     } else if (this.burstLeft <= 0) this.burstCool = rand(a.pause[0], a.pause[1]) * (this.cover ? 1.25 : 1);
   }
 

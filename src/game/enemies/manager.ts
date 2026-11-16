@@ -10,6 +10,9 @@ export interface EnemyHit {
 }
 
 /** Owns every soldier in the level and answers spatial queries about them. */
+/** What a soldier says on first seeing the player. */
+const SPOTTED = ['target_engaged', 'look_out', 'call_for_backup', 'go_go_go'];
+
 export class EnemyManager {
   readonly group = new THREE.Group();
   list: Enemy[] = [];
@@ -146,10 +149,17 @@ export class EnemyManager {
     for (const e of this.list) if (e.alive && (!groups || groups.includes(e.group))) e.enterCombat(x, y, z, false, 0.4 + Math.random() * 1.2);
   }
 
-  shout(e: Enemy, urgent = false): void {
+  /**
+   * A soldier calls out. `lines` are the things he might say; with the recorded voices loaded one is
+   * spoken, otherwise a generated shout stands in. Rate-limited so a squad does not talk over itself.
+   */
+  shout(e: Enemy, urgent = false, lines: string[] = SPOTTED): void {
     if (this.shoutCool > 0 && !urgent) return;
-    this.shoutCool = 2.4;
-    this.game.audio.play(`shout${1 + Math.floor(Math.random() * 3)}`, { x: e.pos.x, y: e.pos.y + 1.6, z: e.pos.z, ref: 9, vol: 0.9 });
+    this.shoutCool = urgent ? 1.6 : 3.4;
+    const audio = this.game.audio;
+    // Kit shifting as he reacts.
+    audio.play('rattle', { x: e.pos.x, y: e.pos.y + 1.1, z: e.pos.z, ref: 6, vol: 0.7 });
+    audio.say(lines.map((l) => `vo_${l}`), { x: e.pos.x, y: e.pos.y + 1.6, z: e.pos.z, ref: 16, vol: 1, rate: e.voice, delay: 0.08 }, `shout${1 + Math.floor(Math.random() * 3)}`);
   }
 
   takePathBudget(): boolean {

@@ -103,23 +103,65 @@ function loopable(b: Buf, sr: number, sec = 0.6): Buf {
   return out;
 }
 
+/** Low-pass applied several times, for a steeper roll-off than a single pole gives. */
+function lpN(b: Buf, sr: number, fc: number, n = 2): Buf {
+  for (let i = 0; i < n; i++) lp(b, sr, fc);
+  return b;
+}
+
+/**
+ * A narrow band of noise that dies away: the ring of something struck. Unlike a sine wave it never
+ * settles on one exact pitch, which is what makes synthetic sounds read as a machine.
+ */
+function ring(sr: number, sec: number, f: number, q: number, tau: number, attack = 0.001): Buf {
+  return decay(bp(noise(sr, sec), sr, f, q), sr, tau, attack);
+}
+
+/** Adds later, quieter, duller copies of the start of a sound: its slap off nearby surfaces. */
+function slap(b: Buf, sr: number, head: number, taps: Array<[number, number, number]>): Buf {
+  const first = b.slice(0, Math.min(b.length, Math.floor(sr * head)));
+  for (const [delay, gain, cutoff] of taps) mix(b, lp(first.slice(), sr, cutoff), gain, Math.floor(sr * delay));
+  return b;
+}
+
+/** Each generated sound differs a little from the last, so repeated shots are not copies. */
+const vary = (): number => 0.9 + Math.random() * 0.2;
+
 interface ShotP {
   dur: number;
+  /** Loudness of the first crack. */
   crack: number;
-  f0: number;
-  f1: number;
+  /** Where the blast's top end starts, in Hz: high is sharp (rifles), low is dull (shotguns). */
+  bright: number;
+  /** How long the blast takes to die away, in seconds. */
   body: number;
-  sub: number;
-  subF: number;
+  /** Weight of the low thump, and the band it sits in. */
+  thump: number;
+  thumpF: number;
+  /** Level of the long tail. */
   tail: number;
   drive: number;
 }
+/**
+ * A gunshot is a burst of noise, not a note: a crack lasting milliseconds, a blast whose top end
+ * closes in a few hundredths of a second, one or two cycles of low pressure, the slap off the
+ * surroundings and a tail rolling away. Nothing in it holds a pitch.
+ */
 function shot(sr: number, p: ShotP): Buf {
   const out = mk(sr, p.dur);
-  mix(out, decay(hp(noise(sr, 0.05), sr, 2400), sr, 0.007), p.crack);
-  mix(out, decay(lp(noise(sr, p.dur), sr, (t) => p.f1 + (p.f0 - p.f1) * Math.exp(-t / 0.035)), sr, p.body), 1.5);
-  mix(out, decay(tone(sr, 0.4, p.subF, p.subF * 0.42, 0.09), sr, 0.085), p.sub);
-  if (p.tail > 0) mix(out, decay(lp(noise(sr, p.dur), sr, 850), sr, p.dur * 0.3, 0.02), p.tail);
+  mix(out, decay(noise(sr, 0.02), sr, 0.0016), p.crack * 0.9);
+  mix(out, decay(hp(noise(sr, 0.04), sr, 2000), sr, 0.006 * vary()), p.crack);
+  const top = p.bright * vary();
+  mix(out, decay(lp(hp(noise(sr, p.dur), sr, 140), sr, (t) => 420 + (top - 420) * Math.exp(-t / 0.03)), sr, p.body * vary()), 1.5);
+  // Too short to be heard as a tone: roughly two cycles.
+  mix(out, decay(tone(sr, 0.12, p.thumpF * vary(), p.thumpF * 0.7, 0.06), sr, 0.02 + 0.3 / p.thumpF), p.thump * 0.9);
+  mix(out, decay(lpN(noise(sr, 0.4), sr, p.thumpF * 1.6, 3), sr, 0.07, 0.003), p.thump * 3.2);
+  slap(out, sr, 0.05, [
+    [0.038 + Math.random() * 0.02, 0.22, 3200],
+    [0.09 + Math.random() * 0.04, 0.13, 1800],
+    [0.17 + Math.random() * 0.06, 0.08, 1100],
+  ]);
+  if (p.tail > 0) mix(out, decay(lpN(noise(sr, p.dur), sr, 1000, 2), sr, p.dur * 0.3, 0.025), p.tail * 1.6);
   return fadeOut(norm(sat(out, p.drive), 0.92), sr, 0.03);
 }
 
@@ -133,84 +175,119 @@ function clicks(sr: number, sec: number, times: number[], f: number, tau = 0.012
 }
 
 function step(sr: number, kind: 'hard' | 'metal' | 'wood' | 'soft' | 'snow'): Buf {
-  const out = mk(sr, 0.24);
+  const out = mk(sr, 0.26);
   if (kind === 'hard') {
-    mix(out, decay(lp(noise(sr, 0.2), sr, 1500), sr, 0.03), 1);
-    mix(out, decay(tone(sr, 0.1, 140, 80), sr, 0.03), 0.7);
+    mix(out, decay(lp(noise(sr, 0.2), sr, 1500 * vary()), sr, 0.03), 1);
+    mix(out, decay(lpN(noise(sr, 0.2), sr, 210, 2), sr, 0.035, 0.002), 2.2);
     mix(out, decay(hp(noise(sr, 0.05), sr, 3000), sr, 0.01), 0.25, Math.floor(sr * 0.045));
   } else if (kind === 'metal') {
-    mix(out, decay(tone(sr, 0.2, 520, 500), sr, 0.06), 0.4);
-    mix(out, decay(tone(sr, 0.2, 1270, 1250), sr, 0.045), 0.25);
+    // A grating rings at several unrelated frequencies at once.
+    mix(out, ring(sr, 0.24, 520 * vary(), 9, 0.05), 0.5);
+    mix(out, ring(sr, 0.24, 1270 * vary(), 12, 0.04), 0.35);
+    mix(out, ring(sr, 0.2, 2150 * vary(), 14, 0.025), 0.2);
     mix(out, decay(lp(noise(sr, 0.1), sr, 2500), sr, 0.02), 0.8);
+    mix(out, decay(lpN(noise(sr, 0.2), sr, 230, 2), sr, 0.03, 0.002), 1.4);
   } else if (kind === 'wood') {
-    mix(out, decay(tone(sr, 0.15, 210, 150), sr, 0.035), 1);
+    mix(out, ring(sr, 0.2, 200 * vary(), 4, 0.035), 1.1);
+    mix(out, ring(sr, 0.15, 560 * vary(), 6, 0.02), 0.3);
     mix(out, decay(lp(noise(sr, 0.1), sr, 1100), sr, 0.02), 0.6);
   } else if (kind === 'snow') {
-    mix(out, decay(bp(noise(sr, 0.24), sr, 2600, 1.2), sr, 0.07, 0.02), 1);
+    mix(out, decay(bp(noise(sr, 0.24), sr, 2600 * vary(), 1.2), sr, 0.07, 0.02), 1);
     mix(out, decay(lp(noise(sr, 0.2), sr, 500), sr, 0.05), 0.6);
   } else {
-    mix(out, decay(lp(noise(sr, 0.22), sr, 620), sr, 0.045, 0.004), 1.2);
+    mix(out, decay(lp(noise(sr, 0.22), sr, 620 * vary()), sr, 0.045, 0.004), 1.2);
     mix(out, decay(bp(noise(sr, 0.2), sr, 3200, 1.5), sr, 0.03, 0.01), 0.18);
   }
   return fadeOut(norm(out, 0.7), sr, 0.02);
 }
 
-/** Speech-like garble for enemy shouts: a buzzy source through moving formants. */
-function garble(sr: number, sec: number, pitch: number): Buf {
-  const src = tone(sr, sec, pitch, pitch * 0.82, sec, 'saw');
-  const breath = noise(sr, sec);
-  for (let i = 0; i < src.length; i++) src[i] = src[i] * 0.8 + breath[i] * 0.25;
-  const syl = 5 + Math.floor(Math.random() * 3);
-  const f1 = [650, 400, 750, 320, 520, 600, 450];
-  const f2 = [1100, 2000, 1300, 2400, 900, 1700, 1500];
-  const a = bp(src.slice(), sr, (t) => f1[Math.floor((t / sec) * syl) % f1.length], 5);
-  const b = bp(src.slice(), sr, (t) => f2[Math.floor((t / sec) * syl) % f2.length], 6);
-  const out = mk(sr, sec);
-  for (let i = 0; i < out.length; i++) {
-    const t = i / sr;
-    const ph = ((t / sec) * syl) % 1;
-    const env = Math.sin(Math.min(1, ph * 1.4) * Math.PI) ** 0.6;
-    out[i] = (a[i] + b[i] * 0.6) * env;
+/** Mouth shapes as the first two resonances of the vocal tract, in Hz. */
+const VOWELS: Array<[number, number]> = [[750, 1200], [520, 1750], [330, 2200], [520, 920], [650, 1650], [430, 1050]];
+
+/**
+ * A hoarse, breathy shout. Real voices buzz from the vocal cords; imitating that buzz with an
+ * oscillator is what makes synthetic speech sound like a robot. This uses breath noise alone,
+ * shaped by a moving mouth, so it reads as a person's rough shout heard through the noise of a fight.
+ */
+function bark(sr: number, syllables: number, len: number, shapes?: Array<[number, number]>): Buf {
+  const out = mk(sr, syllables * len + 0.1);
+  const pick = (): [number, number] => VOWELS[Math.floor(Math.random() * VOWELS.length)];
+  for (let k = 0; k < syllables; k++) {
+    const from = shapes?.[k * 2] ?? pick();
+    const to = shapes?.[k * 2 + 1] ?? pick();
+    const d = len * (0.85 + Math.random() * 0.3);
+    const src = hp(noise(sr, d), sr, 260);
+    const glide = (a: number, b: number) => (t: number) => a + (b - a) * Math.min(1, t / (d * 0.6));
+    const f1 = bp(src.slice(), sr, glide(from[0] * vary(), to[0]), 6);
+    const f2 = bp(src.slice(), sr, glide(from[1] * vary(), to[1]), 8);
+    const f3 = bp(src.slice(), sr, 2750 * vary(), 7);
+    const syl = mk(sr, d);
+    for (let i = 0; i < syl.length; i++) {
+      const t = i / syl.length;
+      const env = Math.min(1, t / 0.1) * Math.min(1, (1 - t) / 0.4);
+      syl[i] = (f1[i] + f2[i] * 0.7 + f3[i] * 0.22) * env;
+    }
+    const at = Math.floor(sr * (k * len + 0.01));
+    // A hard consonant in front of most syllables.
+    if (Math.random() < 0.75) mix(out, decay(hp(noise(sr, 0.03), sr, 2600), sr, 0.007), 0.35, Math.max(0, at - Math.floor(sr * 0.008)));
+    mix(out, syl, 1, at);
   }
-  return fadeOut(norm(out, 0.7), sr, 0.04);
+  return fadeOut(norm(lp(out, sr, 5200), 0.6), sr, 0.03);
+}
+
+/** Webbing, a sling and loose kit shifting as someone moves suddenly. */
+function rattle(sr: number): Buf {
+  const out = mk(sr, 0.45);
+  const n = 4 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) {
+    const at = Math.floor(sr * (0.01 + Math.random() * 0.3));
+    mix(out, ring(sr, 0.08, 1400 + Math.random() * 2600, 5, 0.008 + Math.random() * 0.01), 0.4 + Math.random() * 0.5, at);
+  }
+  mix(out, decay(bp(noise(sr, 0.4), sr, 900, 0.7), sr, 0.12, 0.03), 0.5);
+  return fadeOut(norm(out, 0.5), sr, 0.03);
 }
 
 const GEN: Record<string, GenFn> = {
   // ---- gunshots by acoustic class
-  shotPistol: (sr) => shot(sr, { dur: 0.42, crack: 0.9, f0: 3000, f1: 420, body: 0.045, sub: 0.6, subF: 135, tail: 0.18, drive: 2.2 }),
-  shotMagnum: (sr) => shot(sr, { dur: 0.7, crack: 1.1, f0: 3200, f1: 300, body: 0.07, sub: 1.1, subF: 105, tail: 0.3, drive: 2.8 }),
-  shotSmg: (sr) => shot(sr, { dur: 0.3, crack: 0.8, f0: 3600, f1: 500, body: 0.035, sub: 0.45, subF: 150, tail: 0.12, drive: 2.0 }),
-  shotRifle: (sr) => shot(sr, { dur: 0.6, crack: 1.3, f0: 4200, f1: 330, body: 0.06, sub: 0.85, subF: 110, tail: 0.28, drive: 2.6 }),
-  shotBattle: (sr) => shot(sr, { dur: 0.8, crack: 1.3, f0: 3600, f1: 260, body: 0.075, sub: 1.1, subF: 92, tail: 0.36, drive: 2.9 }),
-  shotSniper: (sr) => shot(sr, { dur: 1.3, crack: 1.5, f0: 3800, f1: 220, body: 0.09, sub: 1.3, subF: 78, tail: 0.5, drive: 3.0 }),
-  shotAmr: (sr) => shot(sr, { dur: 1.7, crack: 1.6, f0: 3000, f1: 160, body: 0.13, sub: 1.8, subF: 60, tail: 0.65, drive: 3.4 }),
-  shotShotgun: (sr) => shot(sr, { dur: 0.85, crack: 0.9, f0: 2400, f1: 210, body: 0.1, sub: 1.25, subF: 84, tail: 0.38, drive: 3.0 }),
-  shotLmg: (sr) => shot(sr, { dur: 0.5, crack: 1.2, f0: 3400, f1: 290, body: 0.06, sub: 1.0, subF: 98, tail: 0.25, drive: 2.8 }),
-  shotMini: (sr) => shot(sr, { dur: 0.16, crack: 1.1, f0: 3600, f1: 380, body: 0.03, sub: 0.7, subF: 110, tail: 0, drive: 2.5 }),
+  shotPistol: (sr) => shot(sr, { dur: 0.42, crack: 0.9, bright: 3000, body: 0.045, thump: 0.6, thumpF: 135, tail: 0.18, drive: 1.5 }),
+  shotMagnum: (sr) => shot(sr, { dur: 0.7, crack: 1.1, bright: 3200, body: 0.07, thump: 1.1, thumpF: 105, tail: 0.3, drive: 1.9 }),
+  shotSmg: (sr) => shot(sr, { dur: 0.3, crack: 0.8, bright: 3600, body: 0.035, thump: 0.45, thumpF: 150, tail: 0.12, drive: 1.36 }),
+  shotRifle: (sr) => shot(sr, { dur: 0.6, crack: 1.3, bright: 4200, body: 0.06, thump: 0.85, thumpF: 110, tail: 0.28, drive: 1.77 }),
+  shotBattle: (sr) => shot(sr, { dur: 0.8, crack: 1.3, bright: 3600, body: 0.075, thump: 1.1, thumpF: 92, tail: 0.36, drive: 1.97 }),
+  shotSniper: (sr) => shot(sr, { dur: 1.3, crack: 1.5, bright: 3800, body: 0.09, thump: 1.3, thumpF: 78, tail: 0.5, drive: 2.04 }),
+  shotAmr: (sr) => shot(sr, { dur: 1.7, crack: 1.6, bright: 3000, body: 0.13, thump: 1.8, thumpF: 60, tail: 0.65, drive: 2.31 }),
+  shotShotgun: (sr) => shot(sr, { dur: 0.85, crack: 0.9, bright: 2400, body: 0.1, thump: 1.25, thumpF: 84, tail: 0.38, drive: 2.04 }),
+  shotLmg: (sr) => shot(sr, { dur: 0.5, crack: 1.2, bright: 3400, body: 0.06, thump: 1.0, thumpF: 98, tail: 0.25, drive: 1.9 }),
+  shotMini: (sr) => shot(sr, { dur: 0.16, crack: 1.1, bright: 3600, body: 0.03, thump: 0.7, thumpF: 110, tail: 0, drive: 1.7 }),
   shotSup: (sr) => {
-    const out = mk(sr, 0.22);
-    mix(out, decay(lp(noise(sr, 0.2), sr, (t) => 500 + 2600 * Math.exp(-t / 0.012)), sr, 0.028), 1.2);
-    mix(out, decay(tone(sr, 0.1, 150, 70, 0.05), sr, 0.03), 0.4);
-    mix(out, clicks(sr, 0.1, [0.004, 0.03], 2800, 0.006), 0.35);
+    // A suppressed shot is mostly the action cycling: a muffled pop, a soft thump, gas.
+    const out = mk(sr, 0.26);
+    mix(out, decay(lp(noise(sr, 0.2), sr, (t) => 600 + 2200 * Math.exp(-t / 0.01)), sr, 0.022 * vary()), 1.1);
+    mix(out, decay(lpN(noise(sr, 0.2), sr, 260, 2), sr, 0.035, 0.002), 1.6);
+    mix(out, clicks(sr, 0.12, [0.006, 0.034, 0.05], 2600, 0.005), 0.5);
+    mix(out, decay(hp(noise(sr, 0.2), sr, 4500), sr, 0.05, 0.01), 0.1);
     return fadeOut(norm(out, 0.55), sr, 0.02);
   },
   shotLauncher: (sr) => {
-    const out = mk(sr, 1.2);
-    mix(out, decay(bp(noise(sr, 1.2), sr, (t) => 300 + 2400 * Math.min(1, t / 0.5), 1.4), sr, 0.45, 0.02), 1.2);
-    mix(out, decay(tone(sr, 0.4, 150, 45, 0.15), sr, 0.12), 1.4);
+    const out = mk(sr, 1.3);
+    mix(out, decay(bp(noise(sr, 1.3), sr, (t) => 300 + 2400 * Math.min(1, t / 0.5), 1.4), sr, 0.45, 0.02), 1.2);
+    mix(out, decay(tone(sr, 0.12, 95, 60, 0.06), sr, 0.03), 1.2);
+    mix(out, decay(lpN(noise(sr, 0.6), sr, 180, 3), sr, 0.16, 0.004), 5);
     mix(out, decay(lp(noise(sr, 0.5), sr, 700), sr, 0.14), 1.0);
-    return fadeOut(norm(sat(out, 2), 0.9), sr, 0.1);
+    return fadeOut(norm(sat(out, 1.5), 0.9), sr, 0.1);
   },
   shotThump: (sr) => {
+    // The hollow thunk of a grenade leaving a short, wide tube.
     const out = mk(sr, 0.5);
-    mix(out, decay(tone(sr, 0.4, 210, 60, 0.12), sr, 0.11), 1.4);
-    mix(out, decay(lp(noise(sr, 0.3), sr, 1300), sr, 0.04), 0.8);
-    return fadeOut(norm(sat(out, 1.8), 0.85), sr, 0.03);
+    mix(out, ring(sr, 0.3, 190 * vary(), 5, 0.045), 1.6);
+    mix(out, decay(lpN(noise(sr, 0.3), sr, 240, 2), sr, 0.06, 0.003), 2.4);
+    mix(out, decay(lp(noise(sr, 0.3), sr, 1300), sr, 0.035), 0.8);
+    return fadeOut(norm(sat(out, 1.4), 0.85), sr, 0.03);
   },
   shotBow: (sr) => {
     const out = mk(sr, 0.4);
-    mix(out, decay(tone(sr, 0.4, 240, 205), sr, 0.07), 0.9);
-    mix(out, decay(tone(sr, 0.4, 487, 470), sr, 0.04), 0.4);
+    mix(out, ring(sr, 0.4, 225 * vary(), 14, 0.06), 1.1);
+    mix(out, ring(sr, 0.3, 480 * vary(), 16, 0.035), 0.5);
     mix(out, decay(bp(noise(sr, 0.2), sr, (t) => 3000 - 6000 * t, 2), sr, 0.05), 0.6);
     return norm(out, 0.6);
   },
@@ -341,28 +418,37 @@ const GEN: Record<string, GenFn> = {
     return norm(out, 0.7);
   },
   hurt: (sr) => {
-    const out = mk(sr, 0.3);
-    mix(out, decay(tone(sr, 0.2, 95, 50), sr, 0.06), 1.2);
-    mix(out, decay(lp(noise(sr, 0.2), sr, 1400), sr, 0.03), 0.9);
-    return norm(sat(out, 2), 0.8);
+    // Being hit: the thud of the impact, then a sharp breath in.
+    const out = mk(sr, 0.4);
+    mix(out, decay(lpN(noise(sr, 0.2), sr, 240, 2), sr, 0.035, 0.002), 2.6);
+    mix(out, decay(lp(noise(sr, 0.2), sr, 1400), sr, 0.025), 0.8);
+    mix(out, decay(bp(noise(sr, 0.28), sr, (t) => 1300 + 2600 * t, 1.6), sr, 0.09, 0.05), 0.45, Math.floor(sr * 0.07));
+    return norm(sat(out, 1.5), 0.8);
   },
-  hurtBlast: (sr) => norm(sat(mix(decay(tone(sr, 0.5, 70, 35), sr, 0.15), decay(lp(noise(sr, 0.5), sr, 600), sr, 0.12), 1), 2), 0.85),
+  hurtBlast: (sr) => {
+    const out = mk(sr, 0.6);
+    mix(out, decay(lpN(noise(sr, 0.6), sr, 130, 3), sr, 0.16, 0.004), 6);
+    mix(out, decay(lp(noise(sr, 0.5), sr, 600), sr, 0.12), 1);
+    return norm(sat(out, 1.6), 0.85);
+  },
   bodyfall: (sr) => {
     const out = mk(sr, 0.5);
-    mix(out, decay(tone(sr, 0.3, 90, 48), sr, 0.07), 1);
+    mix(out, decay(lpN(noise(sr, 0.4), sr, 170, 3), sr, 0.07, 0.004), 5);
     mix(out, decay(lp(noise(sr, 0.4), sr, 700), sr, 0.09), 0.9);
-    mix(out, decay(bp(noise(sr, 0.2), sr, 2200, 1), sr, 0.04), 0.2, Math.floor(sr * 0.12));
+    mix(out, rattle(sr), 0.5, Math.floor(sr * 0.03));
     return norm(out, 0.6);
   },
   grunt: (sr) => {
-    const src = tone(sr, 0.3, 150 + Math.random() * 40, 95, 0.25, 'saw');
-    const out = bp(src, sr, (t) => 700 - 900 * t, 4);
-    mix(out, lp(noise(sr, 0.3), sr, 900), 0.15);
-    return fadeOut(norm(decay(out, sr, 0.11, 0.015), 0.55), sr, 0.03);
+    // The breath knocked out of someone.
+    const out = mk(sr, 0.34);
+    mix(out, bark(sr, 1, 0.17, [[700, 1150], [470, 900]]), 1);
+    mix(out, decay(lpN(noise(sr, 0.2), sr, 230, 2), sr, 0.04, 0.002), 1.6);
+    return fadeOut(norm(out, 0.55), sr, 0.03);
   },
-  shout1: (sr) => garble(sr, 0.55, 165),
-  shout2: (sr) => garble(sr, 0.75, 140),
-  shout3: (sr) => garble(sr, 0.45, 190),
+  shout1: (sr) => bark(sr, 1, 0.24),
+  shout2: (sr) => bark(sr, 2, 0.17),
+  shout3: (sr) => bark(sr, 3, 0.14),
+  rattle: (sr) => rattle(sr),
   medkit: (sr) => {
     const out = mk(sr, 1.5);
     mix(out, decay(bp(noise(sr, 0.4), sr, (t) => 1200 + 7000 * t, 1.5), sr, 0.2, 0.05), 0.6);
@@ -523,15 +609,24 @@ const GEN: Record<string, GenFn> = {
     return loopable(norm(n, 0.5), sr, 0.5);
   },
   // ---- percussion for the score
-  mKick: (sr) => norm(sat(decay(tone(sr, 0.5, 130, 38, 0.09), sr, 0.16), 2), 0.95),
+  mKick: (sr) => {
+    // A big skinned drum: a short low note with the slap of the beater and the rumble of the shell.
+    const out = mk(sr, 0.9);
+    mix(out, decay(tone(sr, 0.6, 78, 58, 0.25), sr, 0.11), 1);
+    mix(out, decay(lpN(noise(sr, 0.5), sr, 150, 3), sr, 0.12, 0.003), 4);
+    mix(out, decay(bp(noise(sr, 0.06), sr, 1100, 1.2), sr, 0.008), 0.35);
+    return norm(sat(out, 1.3), 0.9);
+  },
   mSnare: (sr) => {
     const out = mk(sr, 0.4);
     mix(out, decay(bp(noise(sr, 0.4), sr, 1700, 0.8), sr, 0.09), 1);
     mix(out, decay(tone(sr, 0.2, 190, 140), sr, 0.05), 0.6);
     return norm(out, 0.8);
   },
-  mHat: (sr) => norm(decay(hp(noise(sr, 0.1), sr, 7000), sr, 0.018), 0.5),
-  mTom: (sr) => norm(decay(tone(sr, 0.7, 95, 60, 0.3), sr, 0.25), 0.9),
+  mHat: (sr) => norm(decay(bp(noise(sr, 0.14), sr, 4200, 1.1), sr, 0.03, 0.012), 0.4),
+  // A muffled heartbeat of a drum for tension: felt more than heard.
+  mPulse: (sr) => norm(mix(decay(tone(sr, 0.3, 62, 50, 0.12), sr, 0.07), decay(lpN(noise(sr, 0.3), sr, 120, 3), sr, 0.08, 0.004), 4), 0.8),
+  mTom: (sr) => norm(mix(decay(tone(sr, 0.7, 95, 66, 0.3), sr, 0.16), decay(lpN(noise(sr, 0.5), sr, 190, 3), sr, 0.1, 0.003), 3.5), 0.9),
   mHit: (sr) => {
     const out = mk(sr, 3);
     mix(out, decay(tone(sr, 3, 49, 36, 2), sr, 1.1), 1);
@@ -539,6 +634,16 @@ const GEN: Record<string, GenFn> = {
     return norm(sat(out, 1.6), 0.9);
   },
 };
+
+/** Sounds that get several randomly chosen takes. */
+const TAKES = /^(shot(?!Taser)|step|hit|shout|grunt|hurt$|casing|rattle)/;
+
+/** Renders one sound outside the audio engine (tests and tools). */
+export function renderSound(name: string, sampleRate = 48000): Float32Array | null {
+  const gen = GEN[name];
+  return gen ? gen(sampleRate) : null;
+}
+export const SOUND_NAMES = (): string[] => Object.keys(GEN);
 
 const STEP_BY_SURFACE: Record<Surface, string> = {
   concrete: 'stepHard', metal: 'stepMetal', wood: 'stepWood', dirt: 'stepSoft', sand: 'stepSoft', snow: 'stepSnow',
@@ -550,6 +655,8 @@ const HIT_BY_SURFACE: Record<Surface, string> = {
 };
 
 export interface PlayOpts {
+  /** Play through a radio: band-limited, as heard over a headset. */
+  radio?: boolean;
   vol?: number;
   rate?: number;
   /** World position: makes the sound positional. */
@@ -581,6 +688,10 @@ class AudioSys {
   private verb!: ConvolverNode;
   private verbGain!: GainNode;
   private buffers = new Map<string, AudioBuffer>();
+  /** Recorded sounds (voices, gunshots) loaded from audio/. A name with takes is stored as name~0, name~1... */
+  private samples = new Map<string, AudioBuffer>();
+  private sampleTakes = new Map<string, number>();
+  private samplesAsked = false;
   private loops: Loop[] = [];
   private voices = 0;
   private lx = 0;
@@ -600,6 +711,9 @@ class AudioSys {
   private step16 = 0;
   private root = 38;
   private pad: Array<{ osc: OscillatorNode; gain: GainNode }> = [];
+  /** Narrow bands of looping noise tuned to the chord: an airy, string-like bed with no synthetic edge. */
+  private air: BiquadFilterNode[] = [];
+  private airSrc: AudioBufferSourceNode | null = null;
   private padFilter: BiquadFilterNode | null = null;
   private padGain: GainNode | null = null;
   private drumGain: GainNode | null = null;
@@ -645,6 +759,7 @@ class AudioSys {
       this.verb.connect(this.verbGain).connect(this.muffle);
       this.setReverb('open');
       this.applyVolumes();
+      void this.loadSamples();
       if (this.wantAmb.length) this.setAmbience(this.wantAmb, this.battle);
       if (this.musicOn) this.buildScore();
     }
@@ -670,14 +785,25 @@ class AudioSys {
 
   private buffer(name: string): AudioBuffer | null {
     if (!this.ctx) return null;
-    let b = this.buffers.get(name);
+    // Recordings come first; anything not recorded (or not loaded yet) is generated.
+    const recorded = this.sampleTakes.get(name);
+    if (recorded) {
+      const hit = this.samples.get(`${name}~${Math.floor(Math.random() * recorded)}`);
+      if (hit) return hit;
+    }
+    const single = this.samples.get(name);
+    if (single) return single;
+    const gen = GEN[name];
+    if (!gen) return null;
+    // Sounds heard again and again get several takes, picked at random, so bursts are not copies.
+    const takes = TAKES.test(name) ? 3 : 1;
+    const key = takes > 1 ? `${name}~${Math.floor(Math.random() * takes)}` : name;
+    let b = this.buffers.get(key);
     if (!b) {
-      const gen = GEN[name];
-      if (!gen) return null;
       const data = gen(this.ctx.sampleRate);
       b = this.ctx.createBuffer(1, data.length, this.ctx.sampleRate);
       b.getChannelData(0).set(data);
-      this.buffers.set(name, b);
+      this.buffers.set(key, b);
     }
     return b;
   }
@@ -685,6 +811,48 @@ class AudioSys {
   /** Pre-renders sounds during loading so the first gunshot never hitches. */
   warm(names: string[]): void {
     for (const n of names) this.buffer(n);
+  }
+
+  /** True once a recording of this sound (or of any take of it) has loaded. */
+  has(name: string): boolean {
+    return this.samples.has(name) || this.sampleTakes.has(name);
+  }
+
+  /**
+   * Loads the recorded audio listed in audio/manifest.json: real voices and gunshots. Every file is
+   * optional. Whatever is missing or fails to decode falls back to the generated sound of that name.
+   */
+  private async loadSamples(base = './audio/'): Promise<void> {
+    const c = this.ctx;
+    if (!c || this.samplesAsked || typeof fetch !== 'function') return;
+    this.samplesAsked = true;
+    try {
+      const manifest = (await (await fetch(`${base}manifest.json`)).json()) as Record<string, string>;
+      await Promise.all(
+        Object.entries(manifest).map(async ([name, file]) => {
+          try {
+            const data = await (await fetch(base + file)).arrayBuffer();
+            this.samples.set(name, await c.decodeAudioData(data));
+            const cut = name.lastIndexOf('~');
+            if (cut > 0) this.sampleTakes.set(name.slice(0, cut), Math.max(this.sampleTakes.get(name.slice(0, cut)) ?? 0, Number(name.slice(cut + 1)) + 1));
+          } catch {
+            /* keep the generated version */
+          }
+        }),
+      );
+    } catch {
+      /* this build carries no recordings */
+    }
+  }
+
+  /**
+   * A spoken line: one of `lines` that has a recording, picked at random. Without recordings it
+   * falls back to `fallback` (a generated sound), so the cue is never lost.
+   */
+  say(lines: string[], o: PlayOpts = {}, fallback = ''): void {
+    const ready = lines.filter((l) => this.samples.has(l));
+    if (ready.length) this.play(ready[Math.floor(Math.random() * ready.length)], o);
+    else if (fallback) this.play(fallback, o);
   }
 
   setListener(x: number, y: number, z: number, fx: number, fy: number, fz: number): void {
@@ -721,6 +889,18 @@ class AudioSys {
     const gain = c.createGain();
     let vol = o.vol ?? 1;
     let node: AudioNode = src;
+    if (o.radio) {
+      // Heard over a headset: only the narrow band a radio carries.
+      const low = c.createBiquadFilter();
+      low.type = 'highpass';
+      low.frequency.value = 430;
+      const high = c.createBiquadFilter();
+      high.type = 'lowpass';
+      high.frequency.value = 3000;
+      node.connect(low);
+      low.connect(high);
+      node = high;
+    }
     const positional = o.x !== undefined;
     let dist = 0;
     if (positional) {
@@ -862,6 +1042,9 @@ class AudioSys {
     this.padGain.gain.setTargetAtTime(0, c.currentTime, 0.5);
     for (const p of this.pad) p.osc.stop(c.currentTime + 3);
     this.pad = [];
+    this.airSrc?.stop(c.currentTime + 3);
+    this.airSrc = null;
+    this.air = [];
     this.padGain = null;
   }
 
@@ -890,7 +1073,7 @@ class AudioSys {
     this.padFilter.Q.value = 0.7;
     this.padGain = c.createGain();
     this.padGain.gain.value = 0;
-    this.padGain.gain.setTargetAtTime(0.16, c.currentTime, 2.5);
+    this.padGain.gain.setTargetAtTime(0.13, c.currentTime, 2.5);
     this.padFilter.connect(this.padGain).connect(this.musicBus);
     const send = c.createGain();
     send.gain.value = 0.35;
@@ -906,16 +1089,35 @@ class AudioSys {
     for (let i = 0; i < notes.length; i++) {
       for (const det of [-7, 6]) {
         const osc = c.createOscillator();
-        osc.type = i === 0 ? 'triangle' : 'sawtooth';
+        // Soft, rounded tones only. Sawtooth waves are what give a score its synthesiser buzz.
+        osc.type = i === 0 ? 'triangle' : 'sine';
         osc.frequency.value = this.hz(notes[i]);
         osc.detune.value = det;
         const g = c.createGain();
-        g.gain.value = i === 0 ? 0.6 : 0.2;
+        g.gain.value = i === 0 ? 0.5 : 0.24;
         osc.connect(g).connect(this.padFilter);
         osc.start();
         this.pad.push({ osc, gain: g });
       }
     }
+    const hiss = c.createBuffer(1, c.sampleRate * 3, c.sampleRate);
+    const hd = hiss.getChannelData(0);
+    for (let i = 0; i < hd.length; i++) hd[i] = Math.random() * 2 - 1;
+    this.airSrc = c.createBufferSource();
+    this.airSrc.buffer = hiss;
+    this.airSrc.loop = true;
+    const airGain = c.createGain();
+    airGain.gain.value = 9;
+    airGain.connect(this.padGain);
+    this.air = notes.map((n) => {
+      const f = c.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = this.hz(n + 12);
+      f.Q.value = 26;
+      (this.airSrc as AudioBufferSourceNode).connect(f).connect(airGain);
+      return f;
+    });
+    this.airSrc.start();
     this.nextNote = c.currentTime + 0.2;
     this.step16 = 0;
   }
@@ -925,6 +1127,7 @@ class AudioSys {
     if (!c || !this.pad.length) return;
     const notes = this.chordNotes();
     this.pad.forEach((p, i) => p.osc.frequency.setTargetAtTime(this.hz(notes[i >> 1]), c.currentTime, 0.6));
+    this.air.forEach((f, i) => f.frequency.setTargetAtTime(this.hz(notes[i] + 12), c.currentTime, 0.6));
   }
 
   private drum(name: string, when: number, vol: number, rate = 1): void {
@@ -978,14 +1181,15 @@ class AudioSys {
         // Menu: slow arpeggio over the pad.
         if (i % 4 === 0) {
           const arp = [12, 19, 24, 27, 24, 19, 31, 24];
-          this.pluck(r + arp[(this.step16 / 4) % 8 | 0], t, 0.05, 1.4, 'triangle');
+          this.pluck(r + arp[(this.step16 / 4) % 8 | 0], t, 0.045, 1.6, 'sine');
         }
       } else {
-        if (I > 0.22 && i % 2 === 0) this.pluck(r + (i === 6 || i === 14 ? 7 : 0), t, 0.05 + I * 0.07, 0.16);
+        // Tension is a muffled drum pulse, like a heartbeat, rather than a synthesiser line.
+        if (I > 0.22 && i % 4 === 0) this.drum('mPulse', t, 0.3 + I * 0.3, i === 8 ? 1.12 : 1);
         if (I > 0.55) {
-          if (i === 0 || i === 6 || i === 10) this.drum('mKick', t, 0.5);
-          if (i === 4 || i === 12) this.drum('mSnare', t, 0.3);
-          if (i % 2 === 0) this.drum('mHat', t, 0.12 + (i % 4 === 0 ? 0.08 : 0));
+          if (i === 0 || i === 6 || i === 10) this.drum('mKick', t, 0.55);
+          if (i === 4 || i === 12) this.drum('mSnare', t, 0.26);
+          if (I > 0.8 && i % 4 === 2) this.drum('mHat', t, 0.1);
           if (bar % 4 === 3 && i >= 12) this.drum('mTom', t, 0.35, 1 + (i - 12) * 0.08);
         } else if (I > 0.2 && i === 0 && bar % 2 === 0) {
           this.drum('mTom', t, 0.22, 0.8);

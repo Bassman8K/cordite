@@ -35,7 +35,7 @@ export class Mission {
   private lines: Line[] = [];
   private lineBusy = 0;
   private clock = 0;
-  private countdown: { label: string; t: number; fn: () => void } | null = null;
+  private countdown: { label: string; t: number; fn: () => void; hurried?: boolean } | null = null;
   private lastNote = '';
   private noteT = 0;
   private marker = new THREE.Vector3();
@@ -300,6 +300,11 @@ export class Mission {
     if (this.countdown) {
       this.countdown.t -= dt;
       g.events.emit('timer', { label: this.countdown.label, seconds: this.countdown.t });
+      if (this.countdown.t < 20 && !this.countdown.hurried) {
+        this.countdown.hurried = true;
+        g.audio.play('radio', { vol: 0.5, bus: 'ui' });
+        g.audio.say(['hq_hurry_up'], { radio: true, bus: 'ui', vol: 0.9, delay: 0.15 });
+      }
       if (this.countdown.t <= 0) {
         const fn = this.countdown.fn;
         this.countdown = null;
@@ -330,6 +335,8 @@ export class Mission {
         return;
       }
       g.audio.play('objective', { vol: 0.7 });
+      g.audio.play('radio', { vol: 0.5, delay: 0.3, bus: 'ui' });
+      g.audio.say(['hq_objective_achieved'], { radio: true, bus: 'ui', vol: 0.85, delay: 0.45 });
       this.enter(next);
       g.saveCheckpoint(next);
     }

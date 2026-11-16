@@ -1,0 +1,20 @@
+Recorded audio in this folder
+=============================
+
+Voice lines (vo_*.mp3, hq_*.mp3)
+  Kenney "Voiceover Pack", www.kenney.nl. Male voice: Jeffrey M. Smith.
+  Creative Commons Zero (CC0). https://opengameart.org/content/voiceover-pack-40-lines
+
+Pain and death sounds (pain_*.mp3, death_*.mp3)
+  "Male Grunt/Yelling sounds" by megaboots.
+  Creative Commons Zero (CC0). https://opengameart.org/content/male-gruntyelling-sounds
+
+Gunshots (shot*.flac)
+  Recordings of a CZ-52 pistol, an SKS, a Mosin-Nagant rifle and a shotgun,
+  Copyright (c) 2009 Vincent Sevedge, Creative Commons Attribution 3.0 Unported
+  (https://creativecommons.org/licenses/by/3.0/), from
+  https://opengameart.org/content/gunshot-sounds
+  Changes: individual shots cut out, re-pitched for different weapon classes and
+  mixed with generated low-frequency and tail layers by scripts/make-audio.mjs.
+
+Everything else the game plays is generated in code.
