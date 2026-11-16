@@ -307,8 +307,10 @@ export function creditsScreen(ui: UI): HTMLElement {
   s.innerHTML = `
     <div class="topbar"><button class="back">Back</button><h1>Credits</h1><div class="rule"></div></div>
     <div class="rows" style="max-width:820px">
-      <p class="debrief"><b class="amber">CORDITE</b> is a single-player tactical shooter built to be small: every texture, model and sound is generated in code when the game starts, so there is nothing heavy to download or keep in memory.</p>
-      <div class="row"><div><div class="n">Engine</div><div class="d">three.js (MIT) rendering on WebGL 2. Collision, ballistics, navigation, AI and audio synthesis are written for this game.</div></div><div></div></div>
+      <p class="debrief"><b class="amber">CORDITE</b> is a single-player tactical shooter built to be small. Its worlds, soldiers, weapons and textures are generated in code when a chapter loads; the voices and the gunfire are real recordings.</p>
+      <div class="row"><div><div class="n">Engine</div><div class="d">three.js (MIT) rendering on WebGL 2. Collision, ballistics, navigation, AI, character animation and sound design are written for this game.</div></div><div></div></div>
+      <div class="row"><div><div class="n">Voices</div><div class="d">Soldier callouts and headquarters: Kenney Voiceover Pack (kenney.nl), male voice Jeffrey M. Smith, CC0. Pain and death: "Male Grunt/Yelling sounds" by megaboots, CC0.</div></div><div></div></div>
+      <div class="row"><div><div class="n">Gunfire</div><div class="d">Recordings of a CZ-52, an SKS, a Mosin-Nagant and a shotgun, © 2009 Vincent Sevedge, used under Creative Commons Attribution 3.0. Cut, re-pitched and layered with generated sound for this game.</div></div><div></div></div>
       <div class="row"><div><div class="n">Typefaces</div><div class="d">Oxanium, Barlow Condensed and Share Tech Mono, used under the SIL Open Font License.</div></div><div></div></div>
       <div class="row"><div><div class="n">Weapons</div><div class="d">Specifications are approximate and drawn from public reference figures. Names of real firearms are the trademarks of their respective owners and are used descriptively; no endorsement is implied.</div></div><div></div></div>
       <div class="row"><div><div class="n">Story</div><div class="d">Port Calder, Dravik, the Corvane Group and everyone in them are fictional.</div></div><div></div></div>

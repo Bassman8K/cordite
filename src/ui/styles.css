@@ -370,7 +370,18 @@
   .btn { min-height: 42px; padding: 0 18px; }
   .menu-list button { padding: 6px 0 !important; }
   .progress-card { min-width: 220px; padding: 10px 14px; }
+  .title .logo { font-size: clamp(40px, 8.4vw, 110px); }
+  .title .logo-sub { margin-top: 10px; }
+  .title .menu-list { padding: 8px 0; }
   .h-radar { width: 6.4em; height: 6.4em; }
+}
+/* Short screens (phones held sideways): the title menu keeps to what fits. */
+@media (max-height: 460px) {
+  .title .logo { font-size: clamp(34px, 7vw, 64px); }
+  .title .logo-sub { display: none; }
+  .title .menu-list button { padding: 3px 0 !important; font-size: 20px !important; }
+  .title .progress-card .kv + .kv { display: none; }
+  .title .title-foot .ver { font-size: 9px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #ui *, #ui *::before, #ui *::after { animation-duration: 0.01s !important; transition-duration: 0.01s !important; }

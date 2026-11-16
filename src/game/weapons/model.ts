@@ -30,11 +30,11 @@ const M = (color: number, rough: number, metal: number, extra: Partial<THREE.Mes
   new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, ...extra });
 
 const MAT = {
-  steel: M(0x2b2d31, 0.42, 0.9),
-  blued: M(0x1a1c21, 0.35, 0.92),
-  park: M(0x4a4c4e, 0.62, 0.7),
+  steel: M(0x34363b, 0.4, 0.9),
+  blued: M(0x25282e, 0.36, 0.9),
+  park: M(0x505255, 0.58, 0.72),
   chrome: M(0xb9bcc0, 0.25, 1),
-  poly: M(0x17181a, 0.72, 0.08),
+  poly: M(0x232427, 0.6, 0.06),
   wood: M(0x6b4423, 0.62, 0.02),
   woodDark: M(0x40260f, 0.58, 0.02),
   woodLight: M(0x9a6a3a, 0.6, 0.02),
@@ -50,8 +50,9 @@ const MAT = {
   lens: M(0x9cc4ee, 0.04, 0.0, { envMapIntensity: 1.2, transparent: true, opacity: 0.05, depthWrite: false }),
   clear: M(0x6f6452, 0.3, 0.1, { transparent: true, opacity: 0.55 }),
   dot: new THREE.MeshBasicMaterial({ color: 0xff2a1a }),
-  cloth: M(0x23271f, 0.95, 0),
+  cloth: M(0x3a3f33, 0.95, 0),
   skin: M(0x1c1d1f, 0.9, 0),
+  glove: M(0x24262a, 0.82, 0.02),
 };
 type MatKey = keyof typeof MAT;
 
@@ -68,8 +69,12 @@ class Kit {
 
   /** Box centred at (x, y, z): w across, h tall, l along the barrel; rx tilts it about the X axis. */
   box(mat: MatKey, w: number, h: number, l: number, x: number, y: number, z: number, rx = 0, round = 0, ry = 0, rz = 0): void {
-    const r = Math.min(round, w / 2 - 1e-4, h / 2 - 1e-4, l / 2 - 1e-4);
-    const g: THREE.BufferGeometry = this.hi && r > 0.0015 ? new RoundedBoxGeometry(w, h, l, 2, r) : new THREE.BoxGeometry(w, h, l);
+    // Nothing machined or moulded has a perfectly sharp edge. Parts that ask for no rounding still
+    // get a fine bevel on the detailed model, which is what catches the light along every edge.
+    const least = Math.min(w, h, l);
+    const want = round > 0 ? round : Math.min(0.0032, least * 0.2);
+    const r = Math.min(want, w / 2 - 1e-4, h / 2 - 1e-4, l / 2 - 1e-4);
+    const g: THREE.BufferGeometry = this.hi && r > 0.0009 ? new RoundedBoxGeometry(w, h, l, round > 0 ? 2 : 1, r) : new THREE.BoxGeometry(w, h, l);
     if (rx) g.rotateX(rx);
     if (ry) g.rotateY(ry);
     if (rz) g.rotateZ(rz);

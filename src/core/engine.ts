@@ -276,7 +276,8 @@ export class Engine {
     } else this.scene.environment = null;
     // The weapon in hand is lit by a neutral studio so it always reads, scaled by how bright the scene is.
     this.vmScene.environment = studioEnvironment(this.renderer);
-    this.vmScene.environmentIntensity = clamp(0.2 + 0.1 * sceneLum, 0.25, 0.4);
+    // Metal only shows its shape through what it reflects, so the reflections stay strong enough to read.
+    this.vmScene.environmentIntensity = clamp(0.34 + 0.14 * sceneLum, 0.42, 0.72);
     const r = env.shadowRange ?? 46;
     const cam = this.sun.shadow.camera;
     cam.left = -r;

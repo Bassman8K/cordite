@@ -1,6 +1,6 @@
 # CORDITE
 
-**A lightweight single-player tactical shooter.** Six chapters, 319 real-world weapons, and a game that weighs about 1.4 MB.
+**A lightweight single-player tactical shooter.** Six chapters, 460 real-world weapons, human enemies with real voices, and a game that weighs under 3 MB.
 
 [**Website and downloads**](https://bassman8k.github.io/cordite/) · [**Play in the browser**](https://bassman8k.github.io/cordite/play/) · [**Latest release**](https://github.com/Bassman8K/cordite/releases/latest) · [**Report a bug**](https://github.com/Bassman8K/cordite/issues/new/choose)
 
@@ -11,10 +11,10 @@
 A private army has stolen LANTERN, a package that turns any guided weapon against whoever launched it. You are KESTREL, and you go in alone.
 
 - **A campaign in six chapters.** A night harbour in the rain, a ruined boulevard, a mountain pass in a blizzard, a desert airfield, an underground lab and a coastal fortress. Each chapter is split into objectives with a checkpoint at every one, and you can start from any chapter you have reached.
-- **319 weapons and counting.** Pistols, submachine guns, assault and battle rifles, sniper and anti-materiel rifles, historic rifles, shotguns, machine guns, launchers, blades and throwables. Each is entered by its real specifications (calibre, muzzle velocity, weight, barrel length, rate of fire, feed), and the game derives recoil, handling, drop and damage from those numbers.
+- **460 weapons and counting.** Pistols, submachine guns, assault and battle rifles, sniper and anti-materiel rifles, historic rifles, shotguns, machine guns, launchers, blades and throwables. Each is entered by its real specifications (calibre, muzzle velocity, weight, barrel length, rate of fire, feed), and the game derives recoil, handling, drop and damage from those numbers.
 - **Simulated ballistics.** Every round is a projectile with travel time, drag, gravity and penetration.
-- **Enemies that fight back.** They patrol, investigate noise, take cover, flank, suppress and call for help.
-- **No asset files.** Every texture, model, sound effect and piece of music is generated in code when a chapter loads.
+- **Enemies that fight back.** They patrol, investigate noise, take cover, flank, suppress and call for help, out loud: recorded voice actors shout "Target engaged", "Reloading", "Fire in the hole" and "Medic" as the fight develops.
+- **Almost nothing stored.** Terrain, buildings, textures, weapon models and soldiers are generated in code when a chapter loads. The only recordings are human voices and real gunfire, about 1.2 MB.
 - **Everywhere.** Windows, macOS, Linux, Android, iPhone and iPad from one codebase, plus any modern browser. Keyboard and mouse, gamepad or touch.
 
 ## Download
@@ -65,7 +65,7 @@ The view follows the mouse once the browser has captured it: click the game once
 
 | | |
 | --- | --- |
-| Game data (the whole web build) | about 1.4 MB |
+| Game data (the whole web build) | about 2.7 MB |
 | Game heap while playing | 30 to 70 MB, Low to High quality |
 | Draw calls per frame | 80 to 250 |
 | Desktop app while playing | about 0.5 GB on Low, 0.7 GB on High |
@@ -127,8 +127,14 @@ scripts         icon, art and site generators
 tests           weapon data and campaign validation
 ```
 
-## Licence and disclaimer
+## Licence, credits and disclaimer
 
-[MIT](LICENSE).
+The code is [MIT](LICENSE). The recorded audio in `public/audio` comes from freely licensed sources, listed in full in [`public/audio/CREDITS.txt`](public/audio/CREDITS.txt):
+
+- Voice lines: Kenney Voiceover Pack (kenney.nl), male voice Jeffrey M. Smith. CC0.
+- Pain and death sounds: "Male Grunt/Yelling sounds" by megaboots. CC0.
+- Gunshots: recordings © 2009 Vincent Sevedge, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), cut, re-pitched and layered with generated sound.
+
+`scripts/make-audio.mjs` rebuilds those files from the original packs.
 
 CORDITE is a work of fiction. Its story, places, organisations and characters are invented. Weapon names are used only to identify the real designs they describe; this project is not affiliated with, sponsored by or endorsed by any manufacturer, and uses no manufacturer artwork.

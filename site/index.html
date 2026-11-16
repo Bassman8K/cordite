@@ -59,7 +59,7 @@
         <div class="wrap stats-row">
           <div class="stat"><b>{{CHAPTER_COUNT}}</b><span>Chapters, each split into checkpoints you can resume from</span></div>
           <div class="stat"><b>{{WEAPONS}}</b><span>Weapons from {{COUNTRIES}} countries, built from their real specifications</span></div>
-          <div class="stat"><b>{{GAME_SIZE}}</b><span>The whole game. Every texture, model and sound is generated in code</span></div>
+          <div class="stat"><b>{{GAME_SIZE}}</b><span>The whole game. Worlds, soldiers and weapons are generated in code; voices and gunfire are recorded</span></div>
           <div class="stat"><b>5</b><span>Platforms from one codebase, plus any modern browser</span></div>
         </div>
       </section>
@@ -84,7 +84,7 @@
         <div class="wrap">
           <p class="kicker">02 <b>//</b> Campaign</p>
           <h2>Six chapters, one stolen weapon</h2>
-          <p class="lead">A private army has taken LANTERN, a package that turns any guided weapon against whoever launched it. You are KESTREL. You go in alone. Every chapter is its own mission with its own place, weather and rules, and you can start from any one you have reached or pick up from the last checkpoint.</p>
+          <p class="lead">A private army has taken LANTERN, a package that turns any guided weapon against whoever launched it. You are KESTREL. You go in alone, against soldiers who call to each other, take cover, flank and shout for a medic when they are hit. Every chapter is its own mission with its own place, weather and rules, and you can start from any one you have reached or pick up from the last checkpoint.</p>
           <div class="chapters">{{CHAPTERS}}</div>
         </div>
       </section>
@@ -113,9 +113,9 @@
         <div class="wrap">
           <p class="kicker">04 <b>//</b> Footprint</p>
           <h2>Built to stay out of the way</h2>
-          <p class="lead">There are no asset files. Textures, weapon models, soldiers, sound effects and the score are all generated when a chapter loads and released when it ends, so the game stays small on disk and steady in memory.</p>
+          <p class="lead">Almost nothing is stored. Terrain, buildings, textures, weapon models and soldiers are generated when a chapter loads and released when it ends. The only recordings are the things code cannot fake: human voices and real gunfire, about a megabyte in all.</p>
           <div class="tiles">
-            <div class="tile reveal"><b>{{GAME_SIZE}}</b><span>Game data</span><p>Code, fonts and chapter art. This is everything the browser and phone versions download.</p></div>
+            <div class="tile reveal"><b>{{GAME_SIZE}}</b><span>Game data</span><p>Code, fonts, chapter art and recorded audio. This is everything the browser and phone versions download.</p></div>
             <div class="tile reveal"><b>{{MEM_HEAP}}</b><span>Game memory in play</span><p>{{MEM_HEAP_NOTE}}</p></div>
             <div class="tile reveal"><b>{{DRAW_CALLS}}</b><span>Draw calls per frame</span><p>Level geometry is merged into a handful of meshes and each soldier is a single draw.</p></div>
             <div class="tile reveal"><b>4</b><span>Quality tiers</span><p>From integrated graphics and phones up to full post-processing. The game picks one and you can change it.</p></div>
@@ -207,7 +207,7 @@
       <div class="wrap">
         <a class="nav-brand" href="#top" aria-label="Cordite, back to top">CORD<i class="round"></i>TE</a>
         <p>CORDITE is a work of fiction. Its story, places, organisations and characters are invented. Weapon names are used only to identify the real designs they describe; the project is not affiliated with, sponsored by or endorsed by any manufacturer, and no manufacturer artwork is used.</p>
-        <p>Free software under the <a href="{{REPO_URL}}/blob/main/LICENSE">MIT licence</a>. The game makes no network requests and collects nothing. This page asks GitHub once for the latest release so it can show file sizes.</p>
+        <p>Voices: Kenney Voiceover Pack and megaboots (CC0). Gunfire: recordings © 2009 Vincent Sevedge (CC BY 3.0), adapted. Free software under the <a href="{{REPO_URL}}/blob/main/LICENSE">MIT licence</a>. The game makes no network requests and collects nothing. This page asks GitHub once for the latest release so it can show file sizes.</p>
         <p class="mono">v{{VERSION}} <b>//</b> © {{YEAR}} Bassman8K <b>//</b> <a href="{{REPO_URL}}">github.com/{{REPO}}</a></p>
       </div>
     </footer>

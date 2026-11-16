@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Engine } from '../../core/engine';
 import { clamp, damp, DEG, lerp, rand, smoothstep } from '../../core/math';
 import { makeSprite } from '../../gfx/textures';
@@ -26,13 +27,42 @@ export interface RigInput {
   crouch: number;
 }
 
+/**
+ * A forearm and a gloved hand. The hand is modelled closed around a grip: four fingers curled
+ * across the front, the thumb lying along the side, knuckle padding on the back. The arm runs
+ * from the wrist (at the origin) towards +Z, where the elbow would be.
+ */
 function makeArm(left: boolean): THREE.Group {
   const g = new THREE.Group();
-  const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.04, 0.36, 3, 8).rotateX(Math.PI / 2).translate(0, 0, 0.27), WEAPON_MATERIALS.cloth);
-  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.046, 0.05, 8).rotateX(Math.PI / 2).translate(0, 0, 0.09), WEAPON_MATERIALS.rubber);
-  const hand = new THREE.Mesh(new RoundedBoxGeometry(0.088, 0.062, 0.115, 2, 0.02).translate(0, 0, 0.015), WEAPON_MATERIALS.skin);
-  const thumb = new THREE.Mesh(new RoundedBoxGeometry(0.026, 0.03, 0.07, 1, 0.01).translate(left ? 0.05 : -0.05, 0.012, -0.01), WEAPON_MATERIALS.skin);
-  g.add(fore, cuff, hand, thumb);
+  const s = left ? 1 : -1; // which way the fingers wrap
+  const sleeve: THREE.BufferGeometry[] = [];
+  const glove: THREE.BufferGeometry[] = [];
+  const pad: THREE.BufferGeometry[] = [];
+  // Forearm: thicker towards the elbow, with the sleeve gathered at the wrist.
+  sleeve.push(new THREE.CylinderGeometry(0.054, 0.039, 0.4, 14, 3).rotateX(Math.PI / 2).translate(0, -0.004, 0.29));
+  sleeve.push(new THREE.CylinderGeometry(0.044, 0.041, 0.035, 14).rotateX(Math.PI / 2).translate(0, -0.002, 0.105));
+  // Glove cuff and palm.
+  glove.push(new THREE.CylinderGeometry(0.041, 0.037, 0.05, 12).rotateX(Math.PI / 2).translate(0, 0, 0.075));
+  glove.push(new RoundedBoxGeometry(0.086, 0.098, 0.05, 3, 0.02).translate(0, 0, 0.03));
+  // Four fingers: a segment across the front of the grip, then the tips coming back along its far side.
+  for (let i = 0; i < 4; i++) {
+    const y = 0.036 - i * 0.0235;
+    const len = i === 0 || i === 3 ? 0.03 : 0.036;
+    glove.push(new THREE.CapsuleGeometry(0.0112, len, 3, 8).rotateZ(Math.PI / 2).translate(s * 0.014, y, -0.012));
+    glove.push(new THREE.CapsuleGeometry(0.0105, 0.022, 3, 8).rotateX(Math.PI / 2).translate(s * 0.046, y, 0.004));
+  }
+  // Thumb along the near side, and padding over the knuckles.
+  glove.push(new THREE.CapsuleGeometry(0.0125, 0.04, 3, 8).rotateX(Math.PI / 2 - 0.35).translate(-s * 0.048, 0.03, 0.0));
+  pad.push(new RoundedBoxGeometry(0.02, 0.07, 0.03, 2, 0.008).translate(-s * 0.046, 0.0, 0.03));
+  pad.push(new RoundedBoxGeometry(0.06, 0.05, 0.012, 2, 0.005).translate(0, 0.01, 0.058));
+  const add = (parts: THREE.BufferGeometry[], mat: THREE.Material) => {
+    const merged = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
+    for (const p of parts) p.dispose();
+    if (merged) g.add(new THREE.Mesh(merged, mat));
+  };
+  add(sleeve, WEAPON_MATERIALS.cloth);
+  add(glove, WEAPON_MATERIALS.glove);
+  add(pad, WEAPON_MATERIALS.rubber);
   return g;
 }
 

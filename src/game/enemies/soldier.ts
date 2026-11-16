@@ -1,5 +1,6 @@
-// Enemy soldier: a procedurally built, rigidly skinned body (one draw call each) plus the AI that
-// drives it - perception, cover use, flanking, suppression, grenades.
+// Enemy soldier: a smoothly skinned human figure built in code (one draw call each, see body.ts),
+// whose hands hold the weapon by inverse kinematics, plus the AI that drives it: perception, cover
+// use, flanking, suppression, grenades.
 
 import * as THREE from 'three';
 import { angleDiff, clamp, damp, dampAngle, DEG, gauss, lerp, rand, randInt } from '../../core/math';
@@ -11,7 +12,8 @@ import type { Game } from '../game';
 import { getWeapon } from '../weapons/data';
 import { buildWeaponModel, disposeWeaponModel } from '../weapons/model';
 import type { WeaponDef } from '../weapons/types';
-import { ARCHETYPES, type Archetype, type RGBA } from './types';
+import { buildSoldierBody, disposeSoldierFabric, soldierFabric } from './body';
+import { ARCHETYPES, type Archetype } from './types';
 
 const B_HIPS = 0, B_SPINE = 1, B_HEAD = 2, B_ARM_LU = 3, B_ARM_LL = 4, B_ARM_RU = 5, B_ARM_RL = 6, B_LEG_LU = 7, B_LEG_LL = 8, B_LEG_RU = 9, B_LEG_RL = 10, B_WEAPON = 11;
 const REST: Array<[number, number, number, number]> = [
@@ -31,6 +33,8 @@ const REST: Array<[number, number, number, number]> = [
 ];
 
 const geoCache = new Map<string, THREE.BufferGeometry>();
+/** Where the support hand goes on each weapon, in the weapon's own space. */
+const supportGrip = new Map<string, THREE.Vector3>();
 let matPBR: THREE.MeshStandardMaterial | null = null;
 let matLow: THREE.MeshLambertMaterial | null = null;
 
@@ -38,77 +42,42 @@ function soldierGeometry(arch: Archetype, weapon: WeaponDef): THREE.BufferGeomet
   const key = `${arch.id}|${weapon.id}`;
   const hit = geoCache.get(key);
   if (hit) return hit;
-  const pos: number[] = [];
-  const nrm: number[] = [];
-  const col: number[] = [];
-  const idx: number[] = [];
-  const add = (g: THREE.BufferGeometry, bone: number, c: RGBA) => {
-    const q = g.index ? g.toNonIndexed() : g;
-    const p = q.attributes.position;
-    const n = q.attributes.normal;
-    for (let i = 0; i < p.count; i++) {
-      pos.push(p.getX(i), p.getY(i), p.getZ(i));
-      nrm.push(n.getX(i), n.getY(i), n.getZ(i));
-      col.push(c[0], c[1], c[2]);
-      idx.push(bone);
-    }
-    if (q !== g) q.dispose();
-    g.dispose();
-  };
-  const box = (w: number, h: number, d: number, x: number, y: number, z: number) => new THREE.BoxGeometry(w, h, d).translate(x, y, z);
-  const L = arch.look;
-  const dark = (c: RGBA, k: number): RGBA => [c[0] * k, c[1] * k, c[2] * k];
-  // Torso, vest and kit
-  add(box(0.34, 0.18, 0.22, 0, 0.97, 0), B_HIPS, dark(L.uniform, 0.9));
-  add(box(0.36, 0.52, 0.22, 0, 1.33, 0), B_SPINE, L.uniform);
-  add(box(0.4, 0.34, 0.27, 0, 1.36, 0), B_SPINE, L.vest);
-  add(box(0.3, 0.12, 0.07, 0, 1.25, -0.16), B_SPINE, dark(L.vest, 0.8));
-  if (L.pack) add(box(0.3, 0.36, 0.14, 0, 1.36, 0.2), B_SPINE, dark(L.vest, 1.15));
-  // Head
-  add(new THREE.SphereGeometry(0.105, 10, 8).scale(1, 1.14, 1.05).translate(0, 1.69, 0), B_HEAD, L.face);
-  add(box(0.09, 0.09, 0.09, 0, 1.585, 0.005), B_HEAD, L.face);
-  if (L.helmet) add(new THREE.SphereGeometry(0.128, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.56).translate(0, 1.71, 0.006), B_HEAD, L.helmet);
-  else add(new THREE.SphereGeometry(0.112, 10, 5, 0, Math.PI * 2, 0, Math.PI * 0.45).translate(0, 1.7, 0.004), B_HEAD, dark(L.vest, 1.3));
-  if (L.visor) add(box(0.17, 0.05, 0.035, 0, 1.705, -0.092), B_HEAD, [0.02, 0.025, 0.03]);
-  // Arms
-  for (const [s, bu, bl] of [[-1, B_ARM_LU, B_ARM_LL], [1, B_ARM_RU, B_ARM_RL]] as const) {
-    add(box(0.105, 0.3, 0.105, s * 0.245, 1.36, 0), bu, L.uniform);
-    add(box(0.13, 0.09, 0.13, s * 0.245, 1.5, 0), bu, L.vest);
-    add(box(0.09, 0.27, 0.09, s * 0.245, 1.075, 0), bl, L.uniform);
-    add(box(0.085, 0.09, 0.09, s * 0.245, 0.9, 0), bl, [0.05, 0.05, 0.05]);
-  }
-  // Legs
-  for (const [s, bu, bl] of [[-1, B_LEG_LU, B_LEG_LL], [1, B_LEG_RU, B_LEG_RL]] as const) {
-    add(box(0.155, 0.46, 0.165, s * 0.1, 0.74, 0), bu, dark(L.uniform, 0.92));
-    add(box(0.125, 0.42, 0.135, s * 0.1, 0.31, 0), bl, dark(L.uniform, 0.92));
-    add(box(0.13, 0.1, 0.27, s * 0.1, 0.05, -0.04), bl, L.boots);
-    add(box(0.11, 0.1, 0.05, s * 0.1, 0.5, -0.075), bl, dark(L.vest, 0.9));
-  }
-  // Weapon, merged in and bound to its own bone
+  const d = buildSoldierBody(arch.look, {
+    hips: B_HIPS, spine: B_SPINE, head: B_HEAD, armLU: B_ARM_LU, armLL: B_ARM_LL, armRU: B_ARM_RU, armRL: B_ARM_RL,
+    legLU: B_LEG_LU, legLL: B_LEG_LL, legRU: B_LEG_RU, legRL: B_LEG_RL,
+  });
+  // The weapon is merged into the same mesh and rides its own bone.
   const model = buildWeaponModel(weapon, false);
+  supportGrip.set(weapon.id, model.gripL.clone());
   const wp = REST[B_WEAPON];
   model.group.traverse((o) => {
-    if (o instanceof THREE.Mesh) {
-      const c = (o.material as THREE.MeshStandardMaterial).color;
-      const g = (o.geometry as THREE.BufferGeometry).clone().translate(wp[0], wp[1], wp[2]);
-      add(g, B_WEAPON, [c.r, c.g, c.b]);
+    if (!(o instanceof THREE.Mesh)) return;
+    const c = (o.material as THREE.MeshStandardMaterial).color;
+    const src = o.geometry as THREE.BufferGeometry;
+    const g = src.index ? src.toNonIndexed() : src.clone();
+    const p = g.attributes.position;
+    const n = g.attributes.normal;
+    for (let i = 0; i < p.count; i++) {
+      d.index.push(d.pos.length / 3);
+      d.pos.push(p.getX(i) + wp[0], p.getY(i) + wp[1], p.getZ(i) + wp[2]);
+      d.nrm.push(n.getX(i), n.getY(i), n.getZ(i));
+      d.col.push(c.r, c.g, c.b);
+      d.uv.push(0.5, 0.5);
+      d.skinIndex.push(B_WEAPON, 0, 0, 0);
+      d.skinWeight.push(1, 0, 0, 0);
     }
+    g.dispose();
   });
   disposeWeaponModel(model);
 
   const geo = new THREE.BufferGeometry();
-  const n = idx.length;
-  const skinIndex = new Uint16Array(n * 4);
-  const skinWeight = new Float32Array(n * 4);
-  for (let i = 0; i < n; i++) {
-    skinIndex[i * 4] = idx[i];
-    skinWeight[i * 4] = 1;
-  }
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  geo.setAttribute('skinIndex', new THREE.BufferAttribute(skinIndex, 4));
-  geo.setAttribute('skinWeight', new THREE.BufferAttribute(skinWeight, 4));
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(d.nrm, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(d.col, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(d.uv, 2));
+  geo.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(d.skinIndex, 4));
+  geo.setAttribute('skinWeight', new THREE.Float32BufferAttribute(d.skinWeight, 4));
+  geo.setIndex(d.index);
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 2.4);
   geo.boundingBox = new THREE.Box3(new THREE.Vector3(-2.2, -0.5, -2.2), new THREE.Vector3(2.2, 2.4, 2.2));
   geoCache.set(key, geo);
@@ -118,7 +87,52 @@ function soldierGeometry(arch: Archetype, weapon: WeaponDef): THREE.BufferGeomet
 export function disposeSoldierAssets(): void {
   for (const g of geoCache.values()) g.dispose();
   geoCache.clear();
+  disposeSoldierFabric();
+  if (matPBR) matPBR.map = null;
+  if (matLow) matLow.map = null;
+  matPBR?.dispose();
+  matLow?.dispose();
+  matPBR = null;
+  matLow = null;
 }
+
+// ---- two-bone reach, used to put both hands on the weapon
+const DOWN = new THREE.Vector3(0, -1, 0);
+const UPPER = 0.3;
+const FORE = 0.335;
+const _dir = new THREE.Vector3();
+const _pole = new THREE.Vector3();
+const _elbow = new THREE.Vector3();
+const _v = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _qi = new THREE.Quaternion();
+const _hand = new THREE.Vector3();
+const _wq = new THREE.Quaternion();
+/** The firing hand's place on any weapon: just behind and below its origin. */
+const FIRE_GRIP = new THREE.Vector3(0.004, -0.07, 0.035);
+
+/**
+ * Bends an arm so its hand lands on `target`. Everything is in the space of the spine bone, which
+ * both the shoulders and the weapon hang from. `side` is -1 for the left arm, 1 for the right.
+ */
+function reach(upper: THREE.Bone, fore: THREE.Bone, shoulder: THREE.Vector3, target: THREE.Vector3, side: number): void {
+  _dir.subVectors(target, shoulder);
+  const dist = clamp(_dir.length(), Math.abs(UPPER - FORE) + 0.02, UPPER + FORE - 0.008);
+  _dir.normalize();
+  // The elbow hangs down and a little out, as it does when a rifle is shouldered.
+  _pole.set(side * 0.22, -1, 0.38);
+  _pole.addScaledVector(_dir, -_pole.dot(_dir)).normalize();
+  const along = (UPPER * UPPER - FORE * FORE + dist * dist) / (2 * dist);
+  const out = Math.sqrt(Math.max(0, UPPER * UPPER - along * along));
+  _elbow.copy(_dir).multiplyScalar(along).addScaledVector(_pole, out);
+  _q.setFromUnitVectors(DOWN, _v.copy(_elbow).normalize());
+  upper.quaternion.copy(_q);
+  // Forearm direction, expressed in the upper arm's own frame.
+  _v.copy(_dir).multiplyScalar(dist).sub(_elbow).normalize().applyQuaternion(_qi.copy(_q).invert());
+  fore.quaternion.setFromUnitVectors(DOWN, _v);
+}
+const SHOULDER_L = new THREE.Vector3(REST[B_ARM_LU][0] - REST[B_SPINE][0], REST[B_ARM_LU][1] - REST[B_SPINE][1], 0);
+const SHOULDER_R = new THREE.Vector3(REST[B_ARM_RU][0] - REST[B_SPINE][0], REST[B_ARM_RU][1] - REST[B_SPINE][1], 0);
 
 export type BodyPart = 'head' | 'torso' | 'legs';
 type State = 'idle' | 'patrol' | 'investigate' | 'combat' | 'search';
@@ -216,8 +230,8 @@ export class Enemy {
     this.state = this.patrol ? 'patrol' : 'idle';
 
     const pbr = game.engine.tier.pbr;
-    if (pbr) matPBR ??= new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86, metalness: 0.04 });
-    else matLow ??= new THREE.MeshLambertMaterial({ vertexColors: true });
+    if (pbr) matPBR ??= new THREE.MeshStandardMaterial({ vertexColors: true, map: soldierFabric(), roughness: 0.9, metalness: 0.02 });
+    else matLow ??= new THREE.MeshLambertMaterial({ vertexColors: true, map: soldierFabric() });
     this.mesh = new THREE.SkinnedMesh(soldierGeometry(this.arch, this.weapon), (pbr ? matPBR : matLow) as THREE.Material);
     for (let i = 0; i < REST.length; i++) {
       const b = new THREE.Bone();
@@ -872,16 +886,21 @@ export class Enemy {
     const co = Math.cos(this.phase);
     const aim = this.aimBlend;
     const stun = this.stunT > 0 ? 1 : 0;
-    // Legs
-    b[B_LEG_LU].rotation.x = s * amp + c * 1.3;
-    b[B_LEG_RU].rotation.x = -s * amp + c * 1.05;
-    b[B_LEG_LL].rotation.x = -(Math.max(0, -co) * amp * 1.5 + c * 2.15);
-    b[B_LEG_RL].rotation.x = -(Math.max(0, co) * amp * 1.5 + c * 1.6);
-    b[B_HIPS].position.y = 0.97 - c * 0.43 + Math.abs(co) * 0.03 * amp;
-    b[B_HIPS].rotation.y = s * 0.08 * amp;
+    // Legs. Standing still to fight means a braced stance: feet apart, the left leading, knees soft.
+    const still = this.speedNow > 0.2 ? 0 : 1;
+    const brace = aim * still * (1 - c);
+    const ease = (1 - aim) * still * (1 - c);
+    b[B_LEG_LU].rotation.x = s * amp + c * 1.3 + brace * 0.3 + ease * 0.05;
+    b[B_LEG_RU].rotation.x = -s * amp + c * 1.05 - brace * 0.2 - ease * 0.04;
+    b[B_LEG_LL].rotation.x = -(Math.max(0, -co) * amp * 1.5 + c * 2.15 + brace * 0.36 + ease * 0.06);
+    b[B_LEG_RL].rotation.x = -(Math.max(0, co) * amp * 1.5 + c * 1.6 + brace * 0.14);
+    b[B_LEG_LU].rotation.z = -0.045 - brace * 0.07;
+    b[B_LEG_RU].rotation.z = 0.045 + brace * 0.09;
+    b[B_HIPS].position.y = 0.97 - c * 0.43 + Math.abs(co) * 0.03 * amp - brace * 0.035;
+    b[B_HIPS].rotation.y = s * 0.08 * amp + brace * 0.3;
     // Torso follows the aim; flinch snaps it back.
-    b[B_SPINE].rotation.x = this.aimPitch * 0.75 * aim - 0.1 * run + c * 0.22 - this.flinch * 0.22 - stun * 0.45;
-    b[B_SPINE].rotation.y = 0.32 * aim - s * 0.06 * amp;
+    b[B_SPINE].rotation.x = this.aimPitch * 0.75 * aim - 0.1 * run - brace * 0.12 + c * 0.22 - this.flinch * 0.22 - stun * 0.45;
+    b[B_SPINE].rotation.y = 0.32 * aim - brace * 0.3 - s * 0.06 * amp;
     b[B_SPINE].rotation.z = stun * Math.sin(this.game.engine.time * 4 + this.id) * 0.1;
     b[B_HEAD].rotation.x = this.aimPitch * 0.25 - c * 0.15 + stun * 0.5;
     b[B_HEAD].rotation.y = -0.3 * aim;
@@ -891,10 +910,24 @@ export class Enemy {
     b[B_ARM_RL].rotation.set(lerp(1.0, 1.15, aim) + stun * 0.9, 0, 0);
     b[B_ARM_LU].rotation.set(lerp(0.5, 1.3, aim) + sw + stun * 1.1, lerp(0.2, 0.25, aim), lerp(0.45, 0.72, aim));
     b[B_ARM_LL].rotation.set(lerp(0.75, 0.42, aim) + stun * 1.0, 0, 0);
-    // Weapon: slung low when calm, up and level when fighting.
+    // Weapon: carried low across the body when calm, up in the shoulder when fighting. It rises and
+    // falls with each step and with breathing.
     const wb = b[B_WEAPON];
-    wb.position.set(lerp(0.12, 0.07, aim), lerp(0.1, 0.36, aim) - stun * 0.2, lerp(-0.2, -0.27, aim));
-    wb.rotation.set(lerp(-0.75, 0.0, aim) - this.flinch * 0.1 - stun * 0.9, lerp(0.35, -0.32, aim), 0);
+    const breath = Math.sin(this.game.engine.time * 1.7 + this.id * 1.3) * 0.006;
+    const stepBob = Math.abs(co) * 0.012 * amp * (1 - aim * 0.6);
+    wb.position.set(lerp(0.1, 0.07, aim), lerp(0.13, 0.36, aim) - stun * 0.2 + breath - stepBob, lerp(-0.23, -0.27, aim));
+    wb.rotation.set(lerp(-0.62, 0.0, aim) - this.flinch * 0.1 - stun * 0.9, lerp(0.42, -0.32, aim), 0);
+    if (stun < 0.5 && this.weapon.cls !== 'melee') {
+      // Both hands hold the weapon wherever it is, instead of the arms striking a fixed pose near it.
+      _wq.setFromEuler(wb.rotation);
+      reach(b[B_ARM_RU], b[B_ARM_RL], SHOULDER_R, _hand.copy(FIRE_GRIP).applyQuaternion(_wq).add(wb.position), 1);
+      const grip = supportGrip.get(this.weapon.id);
+      if (grip) {
+        // Long handguards are held where an arm can comfortably reach.
+        _hand.set(grip.x - 0.01, grip.y - 0.012, Math.max(grip.z, -0.27)).applyQuaternion(_wq).add(wb.position);
+        reach(b[B_ARM_LU], b[B_ARM_LL], SHOULDER_L, _hand, -1);
+      }
+    }
   }
 
   private updateDeath(dt: number): void {
