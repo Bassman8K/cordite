@@ -1,7 +1,7 @@
 // Unified input: keyboard + mouse (pointer lock), gamepad and touch all feed the same actions.
 
 import { clamp } from './math';
-import { store, type Action } from './settings';
+import { IS_TOUCH, store, type Action } from './settings';
 
 const ACTIONS = Object.keys(store.settings.binds) as Action[];
 
@@ -13,10 +13,16 @@ class Input {
   lookX = 0;
   lookY = 0;
   locked = false;
-  /** Last device used, so the HUD can show the right prompts. */
-  device: 'kbm' | 'pad' | 'touch' = 'kbm';
+  /** Device in use right now: decides the prompts shown and whether the on-screen controls appear. */
+  device: 'kbm' | 'pad' | 'touch' = IS_TOUCH ? 'touch' : 'kbm';
   enabled = false;
   onLockChange: (locked: boolean) => void = () => {};
+  onDeviceChange: (device: 'kbm' | 'pad' | 'touch') => void = () => {};
+  /**
+   * Kind of pointer seen last. Browsers follow every touch with made-up mouse events for old pages;
+   * those must not be read as a mouse, or a tap would fire, turn the view or hide the touch controls.
+   */
+  private pointer: 'mouse' | 'touch' = IS_TOUCH ? 'touch' : 'mouse';
   /** Fired for any key press while rebinding. */
   captureNext: ((code: string) => void) | null = null;
 
@@ -29,11 +35,38 @@ class Input {
   private touchMoveY = 0;
   private padPrev: boolean[] = [];
   private canvas: HTMLElement | null = null;
+  /** Cursor position at the last free (uncaptured) mouse move; NaN = no reference yet. */
+  private freeX = NaN;
+  private freeY = NaN;
+  private lastLockTry = -1e9;
   /** Extra multiplier applied to look input (ADS / scope slow-down). */
   lookScale = 1;
 
+  private setDevice(d: 'kbm' | 'pad' | 'touch'): void {
+    if (this.device === d) return;
+    this.device = d;
+    this.onDeviceChange(d);
+  }
+
   attach(canvas: HTMLElement): void {
     this.canvas = canvas;
+    // Real pointer events say what produced them, so they decide between touch and mouse. This also
+    // covers laptops with a touch screen and tablets with a trackpad, where both are present.
+    const seePointer = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') {
+        // A resting mouse can twitch; only a click or a deliberate move takes over from touch.
+        if (e.type !== 'pointerdown' && Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0) < 4) return;
+        if (this.pointer !== 'mouse') this.freeX = NaN; // no jump from where the cursor was before
+        this.pointer = 'mouse';
+        this.setDevice('kbm');
+      } else {
+        this.pointer = 'touch';
+        this.freeX = NaN;
+        this.setDevice('touch');
+      }
+    };
+    window.addEventListener('pointerdown', seePointer, true);
+    window.addEventListener('pointermove', seePointer, true);
     window.addEventListener('keydown', (e) => {
       if (this.captureNext) {
         e.preventDefault();
@@ -45,11 +78,15 @@ class Input {
       if (this.enabled && (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow') || (e.code === 'KeyS' && e.ctrlKey))) e.preventDefault();
       if (e.repeat) return;
       this.codes.add(e.code);
-      this.device = 'kbm';
+      this.setDevice('kbm');
+      // Playing from the keyboard without the mouse captured (for example after resuming with a
+      // key): a key press is a chance to capture it. Escape is the browser's release key.
+      if (this.enabled && !this.locked && e.code !== 'Escape') this.lock(true);
     });
     window.addEventListener('keyup', (e) => this.codes.delete(e.code));
     window.addEventListener('blur', () => this.codes.clear());
     canvas.addEventListener('mousedown', (e) => {
+      if (this.pointer === 'touch') return; // made-up mouse event after a tap
       if (this.captureNext) {
         const fn = this.captureNext;
         this.captureNext = null;
@@ -57,19 +94,36 @@ class Input {
         return;
       }
       this.codes.add(`Mouse${e.button}`);
-      this.device = 'kbm';
+      this.setDevice('kbm');
       if (this.enabled && !this.locked) this.lock();
     });
     window.addEventListener('mouseup', (e) => this.codes.delete(`Mouse${e.button}`));
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('mousemove', (e) => {
-      if (!this.locked || !this.enabled) return;
+      if (!this.enabled || this.pointer === 'touch' || this.device === 'touch') {
+        this.freeX = NaN;
+        return;
+      }
+      let mx: number;
+      let my: number;
+      if (this.locked) {
+        mx = e.movementX || 0;
+        my = e.movementY || 0;
+      } else {
+        // The browser has not captured the mouse (it refused, cannot, or has not been clicked yet).
+        // Turn anyway, from how far the visible cursor moved, so the player is never stuck.
+        const px = this.freeX;
+        const py = this.freeY;
+        this.freeX = e.clientX;
+        this.freeY = e.clientY;
+        if (Number.isNaN(px)) return;
+        mx = e.clientX - px;
+        my = e.clientY - py;
+      }
       const s = 0.0022 * store.settings.sens * this.lookScale;
       // Ignore the occasional huge spurious delta browsers emit when the lock engages.
-      const mx = clamp(e.movementX, -400, 400);
-      const my = clamp(e.movementY, -400, 400);
-      this.lookX += mx * s;
-      this.lookY += my * s * (store.settings.invertY ? -1 : 1);
+      this.lookX += clamp(mx, -400, 400) * s;
+      this.lookY += clamp(my, -400, 400) * s * (store.settings.invertY ? -1 : 1);
     });
     window.addEventListener('wheel', (e) => {
       if (!this.enabled) return;
@@ -77,26 +131,27 @@ class Input {
     }, { passive: true });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
+      this.freeX = NaN;
       if (!this.locked) this.codes.clear();
       this.onLockChange(this.locked);
     });
   }
 
-  lock(): void {
-    if (!this.canvas || this.device === 'touch') return;
+  /**
+   * Asks the browser to capture the mouse. Browsers only grant this straight from a click or key
+   * press, so it is one plain request with nothing to retry. Raw "unadjusted" input is deliberately
+   * not requested: where it is unsupported the request fails and has to be repeated, and a repeated
+   * request no longer counts as coming from the click, so the mouse would never be captured.
+   * `throttled` spaces out speculative attempts (key presses) so a refusal is not hammered.
+   */
+  lock(throttled = false): void {
+    if (!this.canvas || this.locked || this.device === 'touch') return;
+    const now = typeof performance !== 'undefined' ? performance.now() : 0;
+    if (throttled && now - this.lastLockTry < 1300) return;
+    this.lastLockTry = now;
     try {
-      const p = (this.canvas as HTMLElement & { requestPointerLock(o?: unknown): Promise<void> | void }).requestPointerLock({ unadjustedMovement: true });
-      if (p && typeof (p as Promise<void>).catch === 'function') {
-        (p as Promise<void>).catch(() => {
-          // Raw input unsupported (or denied): fall back to standard pointer lock.
-          try {
-            const q = this.canvas?.requestPointerLock() as Promise<void> | void;
-            if (q && typeof (q as Promise<void>).catch === 'function') (q as Promise<void>).catch(() => {});
-          } catch {
-            /* headless or unsupported */
-          }
-        });
-      }
+      const p = this.canvas.requestPointerLock() as Promise<void> | void;
+      if (p && typeof (p as Promise<void>).catch === 'function') (p as Promise<void>).catch(() => {});
     } catch {
       /* unsupported */
     }
@@ -109,7 +164,7 @@ class Input {
   /** Touch / UI buttons hold an action down. */
   setVirtual(a: Action, down: boolean): void {
     this.virtual.set(a, down);
-    if (down) this.device = 'touch';
+    if (down) this.setDevice('touch');
   }
   /** One-frame press (wheel, touch taps). */
   pulse(a: Action): void {
@@ -118,7 +173,7 @@ class Input {
   setTouchMove(x: number, y: number): void {
     this.touchMoveX = x;
     this.touchMoveY = y;
-    if (x || y) this.device = 'touch';
+    if (x || y) this.setDevice('touch');
   }
   addLook(dx: number, dy: number): void {
     this.lookX += dx * this.lookScale;
@@ -160,6 +215,14 @@ class Input {
       mx += x;
       my += y;
     });
+    // Keyboard turning (arrow keys by default), independent of the mouse.
+    const kx = (this.down('lookRight') ? 1 : 0) - (this.down('lookLeft') ? 1 : 0);
+    const ky = (this.down('lookDown') ? 1 : 0) - (this.down('lookUp') ? 1 : 0);
+    if (this.enabled && (kx || ky)) {
+      const rate = 2.2 * store.settings.sens * this.lookScale * dt;
+      this.lookX += kx * rate;
+      this.lookY += ky * rate * 0.6;
+    }
     const l = Math.hypot(mx, my);
     if (l > 1) {
       mx /= l;
@@ -179,7 +242,7 @@ class Input {
     const ly = dz(pad.axes[1]);
     const rx = dz(pad.axes[2]);
     const ry = dz(pad.axes[3]);
-    if (lx || ly || rx || ry) this.device = 'pad';
+    if (lx || ly || rx || ry) this.setDevice('pad');
     move(lx, -ly);
     const curve = (v: number) => Math.sign(v) * v * v;
     const speed = 3.4 * store.settings.sens * this.lookScale;
@@ -193,7 +256,7 @@ class Input {
     for (const [i, a] of map) {
       const b = pad.buttons[i];
       const d = !!b && (b.pressed || b.value > 0.35);
-      if (d) this.device = 'pad';
+      if (d) this.setDevice('pad');
       if (hold.has(a)) {
         if (d) this.now.set(a, true);
       } else if (d && !this.padPrev[i]) {

@@ -7,13 +7,14 @@ export type Difficulty = 'recruit' | 'regular' | 'veteran' | 'realist';
 export type Action =
   | 'forward' | 'back' | 'left' | 'right' | 'jump' | 'crouch' | 'sprint'
   | 'fire' | 'ads' | 'reload' | 'interact' | 'melee' | 'grenade' | 'medkit'
-  | 'primary' | 'secondary' | 'swap' | 'next' | 'prev' | 'firemode' | 'flashlight' | 'pause' | 'map';
+  | 'primary' | 'secondary' | 'swap' | 'next' | 'prev' | 'firemode' | 'flashlight' | 'pause' | 'map'
+  | 'lookLeft' | 'lookRight' | 'lookUp' | 'lookDown';
 
 export const DEFAULT_BINDS: Record<Action, string[]> = {
-  forward: ['KeyW', 'ArrowUp'],
-  back: ['KeyS', 'ArrowDown'],
-  left: ['KeyA', 'ArrowLeft'],
-  right: ['KeyD', 'ArrowRight'],
+  forward: ['KeyW'],
+  back: ['KeyS'],
+  left: ['KeyA'],
+  right: ['KeyD'],
   jump: ['Space'],
   crouch: ['KeyC', 'ControlLeft'],
   sprint: ['ShiftLeft', 'ShiftRight'],
@@ -33,13 +34,36 @@ export const DEFAULT_BINDS: Record<Action, string[]> = {
   flashlight: ['KeyF'],
   pause: ['Escape', 'KeyP'],
   map: ['Tab'],
+  // Turning from the keyboard: looking around must never depend on the mouse being captured.
+  lookLeft: ['ArrowLeft'],
+  lookRight: ['ArrowRight'],
+  lookUp: ['ArrowUp'],
+  lookDown: ['ArrowDown'],
 };
+
+const MOVE_ACTIONS: Action[] = ['forward', 'back', 'left', 'right'];
+const LOOK_ACTIONS: Action[] = ['lookLeft', 'lookRight', 'lookUp', 'lookDown'];
+
+/**
+ * Saves from before keyboard turning existed have the arrow keys on movement. Take them off (unless
+ * that would leave an action with no key) so the arrows turn the view instead of doing both.
+ */
+export function withoutLookKeysOnMovement(binds: Record<Action, string[]>): Record<Action, string[]> {
+  const lookKeys = new Set(LOOK_ACTIONS.flatMap((a) => DEFAULT_BINDS[a]));
+  const out = structuredClone(binds);
+  for (const a of MOVE_ACTIONS) {
+    const kept = (out[a] ?? []).filter((code) => !lookKeys.has(code));
+    if (kept.length) out[a] = kept;
+  }
+  return out;
+}
 
 export const ACTION_LABELS: Record<Action, string> = {
   forward: 'Move forward', back: 'Move back', left: 'Strafe left', right: 'Strafe right', jump: 'Jump / vault', crouch: 'Crouch',
   sprint: 'Sprint / steady aim', fire: 'Fire', ads: 'Aim down sights', reload: 'Reload', interact: 'Interact', melee: 'Melee',
   grenade: 'Throw grenade', medkit: 'Use medkit', primary: 'Primary weapon', secondary: 'Secondary weapon', swap: 'Last weapon',
   next: 'Next weapon', prev: 'Previous weapon', firemode: 'Fire mode', flashlight: 'Flashlight', pause: 'Pause', map: 'Objectives',
+  lookLeft: 'Turn left', lookRight: 'Turn right', lookUp: 'Look up', lookDown: 'Look down',
 };
 
 export interface Settings {
@@ -112,7 +136,7 @@ export interface Progress {
   seenIntro: boolean;
 }
 
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 const isTouch = typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouchstart' in globalThis);
 const mem = typeof navigator !== 'undefined' ? ((navigator as unknown as { deviceMemory?: number }).deviceMemory ?? 8) : 8;
 const cores = typeof navigator !== 'undefined' ? (navigator.hardwareConcurrency ?? 8) : 8;
@@ -196,7 +220,9 @@ class Store {
     // A save written before versioning (or a fresh install) arrives here as v0.
     if (this.settings.v !== SETTINGS_VERSION) {
       // v2: the default field of view was far too wide (78 degrees vertical), which made targets tiny.
-      if (this.settings.fov > 72) this.settings.fov = defaultSettings().fov;
+      if (this.settings.v < 2 && this.settings.fov > 72) this.settings.fov = defaultSettings().fov;
+      // v3: the arrow keys turn the view; older saves still have them on movement.
+      if (this.settings.v < 3 && this.settings.binds) this.settings.binds = withoutLookKeysOnMovement(this.settings.binds);
       this.settings.v = SETTINGS_VERSION;
       write(KEY_SETTINGS, this.settings);
     }

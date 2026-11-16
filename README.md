@@ -49,7 +49,7 @@ The builds are not code-signed yet, so each system asks once before running them
 | Action | Keyboard and mouse | Gamepad |
 | --- | --- | --- |
 | Move | W A S D | Left stick |
-| Look | Mouse | Right stick |
+| Look | Mouse, or the arrow keys | Right stick |
 | Fire / aim | Left / right mouse button | Right / left trigger |
 | Reload | R | |
 | Sprint / crouch / jump | Shift / C or Ctrl / Space | |
@@ -59,7 +59,7 @@ The builds are not code-signed yet, so each system asks once before running them
 | Fire mode / flashlight | B / F | |
 | Objectives / pause | Tab / Esc or P | |
 
-Every key can be rebound in *Settings, Controls*. Phones and tablets get on-screen controls.
+The view follows the mouse once the browser has captured it: click the game once if it asks. The arrow keys always turn, with or without a mouse. Every key can be rebound in *Settings, Controls*. Phones and tablets get on-screen controls, and a laptop with a touch screen switches between the two as you use them.
 
 ## Footprint
 

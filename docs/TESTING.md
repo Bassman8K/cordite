@@ -39,7 +39,7 @@ In the game: **Settings, Tester**.
 A pass through this list covers most of the game:
 
 - [ ] The game starts and the menu is readable at your screen size.
-- [ ] **Chapter 1:** move, sprint, crouch, aim, fire, reload, swap weapons, throw a grenade, use a medkit.
+- [ ] **Chapter 1:** look around with the mouse (click the game once to capture it) and with the arrow keys, then move, sprint, crouch, aim, fire, reload, swap weapons, throw a grenade, use a medkit.
 - [ ] Reach the first checkpoint, pause, quit to the menu and use **Continue**: you resume at that checkpoint.
 - [ ] Die on purpose: you restart from the last checkpoint with the right objective.
 - [ ] **Armory:** search for a weapon, rotate its model, equip it, and check it appears in the next chapter.

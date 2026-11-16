@@ -32,6 +32,9 @@ export class Hud {
   private hit: HTMLElement;
   private killTx: HTMLElement;
   private prompt: HTMLElement;
+  private capture: HTMLElement;
+  /** Seconds spent playing on a computer without the mouse captured. */
+  private freeT = 0;
   private promptKey: HTMLElement;
   private promptTx: HTMLElement;
   private promptBar: HTMLElement;
@@ -80,6 +83,7 @@ export class Hud {
       <div class="h-hit"></div>
       <div class="h-kill sh"></div>
       <div class="h-prompt sh" hidden><span class="key"></span><span class="tx"></span><i></i></div>
+      <div class="h-capture sh" hidden><b>Click to capture the mouse</b><span>The arrow keys turn too</span></div>
       <div class="h-sub"></div>
       <div class="h-vitals sh">
         <div class="h-hp"><b>100</b><span class="label">Health</span></div>
@@ -116,6 +120,7 @@ export class Hud {
     this.hit = q(r, '.h-hit');
     this.killTx = q(r, '.h-kill');
     this.prompt = q(r, '.h-prompt');
+    this.capture = q(r, '.h-capture');
     this.promptKey = q(r, '.h-prompt .key');
     this.promptTx = q(r, '.h-prompt .tx');
     this.promptBar = q(r, '.h-prompt i');
@@ -249,6 +254,13 @@ export class Hud {
     const s = store.settings;
     this.frame++;
     const realist = s.difficulty === 'realist';
+
+    // On a computer the view follows the mouse only once the browser has captured it. If it has not
+    // (the request was refused, or play resumed from the keyboard), say how to get it.
+    const mouseFree = g.state === 'playing' && !input.locked && input.device === 'kbm';
+    this.freeT = mouseFree ? this.freeT + dt : 0;
+    const showCapture = this.freeT > 0.7;
+    if (this.capture.hidden === showCapture) this.capture.hidden = !showCapture;
 
     // ---- vitals
     const hp = Math.ceil(p.health);

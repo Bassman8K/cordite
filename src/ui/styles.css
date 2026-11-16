@@ -288,6 +288,9 @@
 .h-kill.on { animation: killtxt 1.3s ease-out; }
 @keyframes killtxt { 0% { opacity: 0; letter-spacing: 0.6em; } 12% { opacity: 1; letter-spacing: 0.3em; } 70% { opacity: 1; } 100% { opacity: 0; } }
 .h-prompt { position: absolute; left: 50%; top: calc(50% + 7.4em); transform: translateX(-50%); display: flex; align-items: center; gap: 0.8em; padding: 0.55em 1em; background: rgba(6, 9, 12, 0.74); border: 1px solid var(--line2); white-space: nowrap; overflow: hidden; }
+.h-capture { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); display: grid; gap: 0.5em; justify-items: center; padding: 0.8em 1.3em; background: rgba(6, 9, 12, 0.8); border: 1px solid var(--accent); white-space: nowrap; }
+.h-capture b { font: 600 1.05em/1 var(--font-d); letter-spacing: 0.12em; text-transform: uppercase; color: #fff; }
+.h-capture span { font: 400 0.78em/1 var(--font-m); letter-spacing: 0.12em; text-transform: uppercase; color: #b4bcc4; }
 .h-prompt .key { padding: 0.25em 0.55em; font: 400 0.82em/1 var(--font-m); color: #0a0a0a; background: var(--accent); }
 .h-prompt .tx { font: 600 0.96em/1 var(--font-d); letter-spacing: 0.1em; text-transform: uppercase; }
 .h-prompt i { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); }

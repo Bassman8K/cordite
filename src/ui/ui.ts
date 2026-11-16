@@ -9,7 +9,7 @@ import './styles.css';
 
 import { audio } from '../core/audio';
 import { input } from '../core/input';
-import { IS_TOUCH, store } from '../core/settings';
+import { store } from '../core/settings';
 import type { ChapterDef } from '../game/campaign/types';
 import type { Game, GameState } from '../game/game';
 import { armoryScreen } from './armory';
@@ -67,6 +67,8 @@ export class UI {
     this.layer.id = 'screens';
     this.root.append(this.layer);
     this.touch = new TouchControls(this.root, game);
+    // Laptops with a touch screen and tablets with a trackpad switch between the two as they are used.
+    input.onDeviceChange = () => this.touch.show(game.state === 'playing' && input.device === 'touch');
     const rotate = el('div', '', '<div><div class="label a">Rotate your device</div><p class="tip">CORDITE plays in landscape.</p></div>');
     rotate.id = 'rotate';
     this.fade = el('div');
@@ -157,7 +159,9 @@ export class UI {
   async startChapter(def: ChapterDef, fromCheckpoint: boolean): Promise<void> {
     audio.unlock();
     audio.uiPlay('uiConfirm', 0.9);
-    platform.immerse();
+    // Full screen and landscape are for hand-held play; asking for them would also use up the click
+    // that lets a mouse be captured.
+    if (input.device === 'touch') platform.immerse();
     this.fade.classList.add('on');
     await new Promise((r) => setTimeout(r, 380));
     this.home('loading', { chapter: def });
@@ -180,10 +184,10 @@ export class UI {
     clearTimeout(this.stateTimer);
     const playing = s === 'playing';
     this.hud.show(playing || s === 'dead');
-    this.touch.show(playing && (IS_TOUCH || input.device === 'touch'));
+    this.touch.show(playing && input.device === 'touch');
     if (playing) {
       this.clear();
-      if (!IS_TOUCH) input.lock();
+      input.lock();
     } else if (s === 'paused') {
       if (this.top !== 'armory') this.home('pause');
     } else if (s === 'dead') {
