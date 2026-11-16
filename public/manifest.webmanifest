@@ -1,0 +1,19 @@
+{
+  "name": "Cordite",
+  "short_name": "Cordite",
+  "description": "A lightweight single-player tactical shooter: six chapters, 300+ real-world weapons, nothing to download but the game itself.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "landscape",
+  "background_color": "#05070a",
+  "theme_color": "#05070a",
+  "categories": ["games", "action"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

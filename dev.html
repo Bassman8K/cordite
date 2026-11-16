@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CORDITE · developer contact sheet</title>
+    <style>
+      body { margin: 0; background: #0b0d10; color: #cfd6dd; font: 11px/1.3 ui-monospace, Menlo, monospace; }
+      #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; padding: 10px; }
+      .cell { background: #14181d; border: 1px solid #222a33; padding: 6px; }
+      .cell img { width: 100%; display: block; }
+      .cell b { color: #ffb02e; font-weight: 600; }
+      canvas { position: fixed; left: -9999px; }
+      h1 { font-size: 13px; margin: 10px; }
+    </style>
+  </head>
+  <body>
+    <h1 id="title">CORDITE weapon contact sheet (developer tool, not shipped)</h1>
+    <canvas id="gl" width="64" height="64"></canvas>
+    <div id="grid"></div>
+    <script type="module" src="/src/dev/sheet.ts"></script>
+  </body>
+</html>

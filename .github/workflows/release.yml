@@ -1,0 +1,222 @@
+name: Release
+
+# Push a tag such as v0.2.0 to build every platform and publish a GitHub release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and publish, for example v0.1.0
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  web:
+    name: Web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - name: Package the web build with its launchers
+        run: |
+          mkdir -p out/Cordite-web
+          cp -R dist/. out/Cordite-web/
+          cp launchers/web/* out/Cordite-web/
+          chmod +x out/Cordite-web/*.sh out/Cordite-web/*.command
+          (cd out && zip -qr ../Cordite-web.zip Cordite-web)
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-web
+          path: Cordite-web.zip
+          if-no-files-found: error
+
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            target: --win
+            run: release/win-unpacked/Cordite.exe --smoke-test=smoke --software-gl
+          - name: macOS
+            os: macos-latest
+            target: --mac
+            run: release/mac-arm64/Cordite.app/Contents/MacOS/Cordite --smoke-test=smoke
+          - name: Linux
+            os: ubuntu-latest
+            target: --linux
+            run: xvfb-run -a release/linux-unpacked/cordite --no-sandbox --smoke-test=smoke --software-gl
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Build installers
+        run: npx electron-builder ${{ matrix.target }} --publish never
+      - name: Smoke-test the packaged app
+        # Informational: build machines have no real graphics card, so a failure here does not block the release.
+        continue-on-error: true
+        shell: bash
+        run: |
+          ${{ matrix.run }} || true
+          node -e "const r = require('./smoke/result.json'); console.log(JSON.stringify({ ok: r.ok, game: r.game, memoryMB: r.memoryMB, errors: r.errors }, null, 2)); process.exit(r.ok ? 0 : 1);"
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir upload
+          for f in release/*.exe release/*.dmg release/*.zip release/*.AppImage release/*.deb; do
+            [ -f "$f" ] && cp "$f" upload/
+          done
+          ls -la upload
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-desktop-${{ matrix.name }}
+          path: upload/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: smoke-${{ matrix.name }}
+          path: |
+            smoke/*.png
+            smoke/result.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Release keystore (falls back to the debug key when the secrets are not set)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/cordite.keystore"
+            echo "CORDITE_KEYSTORE=$RUNNER_TEMP/cordite.keystore" >> "$GITHUB_ENV"
+            echo "Signing with the release key."
+          else
+            echo "No release keystore configured: signing with the debug key."
+          fi
+      - name: Build the APK
+        working-directory: android
+        env:
+          CORDITE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CORDITE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CORDITE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --console=plain
+      - run: cp android/app/build/outputs/apk/release/app-release.apk Cordite-android.apk
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: Cordite-android.apk
+          if-no-files-found: error
+
+  ios:
+    name: iOS (unsigned)
+    runs-on: macos-latest
+    timeout-minutes: 40
+    # Best effort: an unsigned app for people who sign it themselves. Never blocks a release.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync ios
+      - name: Build the app without signing
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION="${TAG#v}" CURRENT_PROJECT_VERSION="${GITHUB_RUN_NUMBER}" build
+      - name: Package the .ipa
+        run: |
+          mkdir Payload
+          cp -R build/ios/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry Cordite-ios-unsigned.ipa Payload
+          ls -la Cordite-ios-unsigned.ipa
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-ios
+          path: Cordite-ios-unsigned.ipa
+          if-no-files-found: error
+
+  publish:
+    name: Publish the release
+    needs: [web, desktop, android, ios]
+    # Web and desktop are required. Android and iOS are attached when their builds succeed.
+    if: ${{ !cancelled() && needs.web.result == 'success' && needs.desktop.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: assets
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          cd assets
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Create or update the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" assets/* --clobber
+          else
+            gh release create "$TAG" assets/* --verify-tag --title "Cordite ${TAG}" --notes-file .github/release-notes.md
+          fi

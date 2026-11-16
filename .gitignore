@@ -1,0 +1,38 @@
+node_modules/
+dist/
+release/
+_site/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+
+# Local signing material - never commit
+.secrets/
+*.keystore
+*.jks
+
+# Android / iOS build output
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/src/main/assets/public/
+android/capacitor-cordova-android-plugins/
+ios/App/App/public/
+ios/App/Pods/
+ios/DerivedData/
+ios/build/
+
+# Test output
+.playwright-mcp/
+coverage/
+smoke/
+
+# Packaging scratch
+out/
+upload/
+Payload/
+*.apk
+*.aab
+*.ipa

@@ -1,0 +1,19 @@
+{
+  "appId": "io.github.bassman8k.cordite",
+  "appName": "Cordite",
+  "webDir": "dist",
+  "backgroundColor": "#05070a",
+  "android": {
+    "backgroundColor": "#05070a",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "backgroundColor": "#05070a",
+    "contentInset": "never",
+    "scrollEnabled": false
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

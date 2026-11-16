@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#121a22"/><stop offset="1" stop-color="#05070a"/></linearGradient>
+    <linearGradient id="round" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c9831a"/><stop offset="0.35" stop-color="#ffd27a"/><stop offset="0.62" stop-color="#ffb22e"/><stop offset="1" stop-color="#b06f12"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffb22e" stop-opacity="0.34"/><stop offset="1" stop-color="#ffb22e" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="228" fill="url(#bg)"/>
+  <rect x="14" y="14" width="996" height="996" rx="216" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="4"/>
+  <circle cx="512" cy="512" r="400" fill="url(#glow)"/>
+  <circle cx="512" cy="512" r="318" fill="none" stroke="#ffb22e" stroke-opacity="0.32" stroke-width="10"/>
+  <g stroke="#ffb22e" stroke-opacity="0.5" stroke-width="10" stroke-linecap="butt">
+    <path d="M512 132v96M512 796v96M132 512h96M796 512h96"/>
+  </g>
+  <!-- cartridge -->
+  <path d="M512 206c-58 70-88 152-88 248v306h176V454c0-96-30-178-88-248z" fill="url(#round)"/>
+  <rect x="412" y="760" width="200" height="34" fill="#b06f12"/>
+  <rect x="398" y="794" width="228" height="34" rx="6" fill="#8a560c"/>
+  <rect x="424" y="560" width="176" height="14" fill="#8a560c" opacity="0.55"/>
+</svg>

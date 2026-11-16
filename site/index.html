@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en" data-repo="{{REPO}}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>CORDITE: a lightweight single-player tactical shooter</title>
+    <meta name="description" content="CORDITE is a free single-player first-person shooter: a six-chapter campaign, {{WEAPONS}} real-world weapons, and a game that weighs {{GAME_SIZE}}. Windows, macOS, Linux, Android, iPhone and iPad." />
+    <meta name="theme-color" content="#05070a" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CORDITE: Operation Lantern" />
+    <meta property="og:description" content="Six chapters. {{WEAPONS}} real-world weapons. {{GAME_SIZE}} of game. Free on every platform." />
+    <meta property="og:image" content="{{SITE_URL}}img/social.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="./icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    <link rel="preload" href="./fonts/oxanium.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#download">Skip to downloads</a>
+
+    <header class="nav" id="nav">
+      <a class="nav-brand" href="#top" aria-label="Cordite, back to top">CORD<i class="round"></i>TE</a>
+      <nav aria-label="Sections">
+        <a href="#footage">Footage</a>
+        <a href="#campaign">Campaign</a>
+        <a href="#armory">Armory</a>
+        <a href="#footprint">Footprint</a>
+        <a href="#testers">Testers</a>
+      </nav>
+      <a class="btn small" href="#download">Download</a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="hero-grid" aria-hidden="true"></div>
+        <div class="wrap hero-inner">
+          <p class="eyebrow">Operation Lantern <b>//</b> single-player tactical shooter</p>
+          <h1 class="logo" aria-label="Cordite">CORD<i class="round"></i>TE</h1>
+          <p class="hero-line">Six chapters. {{WEAPONS}} real-world weapons. One operator.</p>
+          <p class="hero-sub">A complete first-person campaign that weighs <strong>{{GAME_SIZE}}</strong>. Nothing is downloaded after install, nothing leaves your device, and it runs on Windows, macOS, Linux, Android, iPhone and iPad.</p>
+          <div class="cta">
+            <a class="btn big" id="cta" href="#download">
+              <span id="cta-label">Download</span>
+              <small id="cta-sub">Windows · macOS · Linux · Android · iOS</small>
+            </a>
+            <a class="btn big ghost" href="./play/">
+              <span>Play in browser</span>
+              <small>No install · keyboard, gamepad or touch</small>
+            </a>
+          </div>
+          <p class="hero-meta"><span id="rel-version">v{{VERSION}}</span><i></i><span id="rel-date">Free and open source</span><i></i><span>No account</span><i></i><span>Works offline</span></p>
+        </div>
+        <a class="scroll-cue" href="#footage" aria-label="Scroll to footage"><span></span></a>
+      </section>
+
+      <section class="stats" aria-label="At a glance">
+        <div class="wrap stats-row">
+          <div class="stat"><b>{{CHAPTER_COUNT}}</b><span>Chapters, each split into checkpoints you can resume from</span></div>
+          <div class="stat"><b>{{WEAPONS}}</b><span>Weapons from {{COUNTRIES}} countries, built from their real specifications</span></div>
+          <div class="stat"><b>{{GAME_SIZE}}</b><span>The whole game. Every texture, model and sound is generated in code</span></div>
+          <div class="stat"><b>5</b><span>Platforms from one codebase, plus any modern browser</span></div>
+        </div>
+      </section>
+
+      <section class="section" id="footage">
+        <div class="wrap">
+          <p class="kicker">01 <b>//</b> Footage</p>
+          <h2>Straight from the build</h2>
+          <p class="lead">Unedited captures of the current version. Select any frame to enlarge it.</p>
+          <div class="shots">
+            <button class="shot wide reveal" data-full="./img/shot-play-desert.jpg" data-cap="Chapter 4, Furnace: breaching the airfield perimeter at dusk."><img src="./img/shot-play-desert.jpg" alt="First-person view of a rifle aimed at a guard beside a hangar in the desert" width="1600" height="900" loading="lazy" /><span>Furnace</span></button>
+            <button class="shot reveal" data-full="./img/shot-play-city.jpg" data-cap="Chapter 2, Shattered Mile: a clear sight picture down the boulevard."><img src="./img/shot-play-city.jpg" alt="Looking through a reflex sight at soldiers behind sandbags on a ruined street" width="1600" height="900" loading="lazy" /><span>Shattered Mile</span></button>
+            <button class="shot reveal" data-full="./img/shot-armory.jpg" data-cap="The armory: every weapon can be inspected, compared and equipped."><img src="./img/shot-armory.jpg" alt="Armory screen with a grid of rifles, a rotating 3D model and a statistics panel" width="1600" height="900" loading="lazy" /><span>Armory</span></button>
+            <button class="shot reveal" data-full="./img/shot-play-snow.jpg" data-cap="Chapter 3, Thin Air: the pass in a blizzard."><img src="./img/shot-play-snow.jpg" alt="Snow-covered pine forest in a blizzard with two distant troopers" width="1600" height="900" loading="lazy" /><span>Thin Air</span></button>
+            <button class="shot reveal" data-full="./img/shot-play-bunker.jpg" data-cap="Chapter 5, Black Site: the core chamber on sub-level 3."><img src="./img/shot-play-bunker.jpg" alt="A glowing reactor core in a tiled underground chamber" width="1600" height="900" loading="lazy" /><span>Black Site</span></button>
+            <button class="shot reveal" data-full="./img/shot-campaign.jpg" data-cap="Campaign: briefing, intel, loadout and difficulty for each chapter."><img src="./img/shot-campaign.jpg" alt="Campaign screen listing six chapters with a mission briefing" width="1600" height="900" loading="lazy" /><span>Briefing</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section alt" id="campaign">
+        <div class="wrap">
+          <p class="kicker">02 <b>//</b> Campaign</p>
+          <h2>Six chapters, one stolen weapon</h2>
+          <p class="lead">A private army has taken LANTERN, a package that turns any guided weapon against whoever launched it. You are KESTREL. You go in alone. Every chapter is its own mission with its own place, weather and rules, and you can start from any one you have reached or pick up from the last checkpoint.</p>
+          <div class="chapters">{{CHAPTERS}}</div>
+        </div>
+      </section>
+
+      <section class="section" id="armory">
+        <div class="wrap armory">
+          <div class="armory-text">
+            <p class="kicker">03 <b>//</b> Armory</p>
+            <h2>{{WEAPONS}} weapons, and counting</h2>
+            <p class="lead">Service pistols to anti-materiel rifles, crossbows to rotary cannon. Each one is entered by its real numbers (calibre, muzzle velocity, weight, barrel, rate of fire, feed) and the game works out recoil, handling, drop and damage from those.</p>
+            <ul class="ticks">
+              <li>Every round is a simulated projectile with travel time, drag, drop and penetration.</li>
+              <li>Inspect any weapon in 3D, compare the figures, then carry two guns, a blade and a throwable.</li>
+              <li>The catalogue is data, so it keeps growing. If something is missing, <a href="{{REPO_URL}}/issues/new/choose">ask for it</a>.</li>
+            </ul>
+          </div>
+          <div class="bars" role="list" aria-label="Weapons by class">{{ARSENAL}}</div>
+        </div>
+        <div class="marquee" aria-hidden="true">
+          <div class="marquee-row">{{MARQUEE_A}}{{MARQUEE_A}}</div>
+          <div class="marquee-row rev">{{MARQUEE_B}}{{MARQUEE_B}}</div>
+        </div>
+      </section>
+
+      <section class="section alt" id="footprint">
+        <div class="wrap">
+          <p class="kicker">04 <b>//</b> Footprint</p>
+          <h2>Built to stay out of the way</h2>
+          <p class="lead">There are no asset files. Textures, weapon models, soldiers, sound effects and the score are all generated when a chapter loads and released when it ends, so the game stays small on disk and steady in memory.</p>
+          <div class="tiles">
+            <div class="tile reveal"><b>{{GAME_SIZE}}</b><span>Game data</span><p>Code, fonts and chapter art. This is everything the browser and phone versions download.</p></div>
+            <div class="tile reveal"><b>{{MEM_HEAP}}</b><span>Game memory in play</span><p>{{MEM_HEAP_NOTE}}</p></div>
+            <div class="tile reveal"><b>{{DRAW_CALLS}}</b><span>Draw calls per frame</span><p>Level geometry is merged into a handful of meshes and each soldier is a single draw.</p></div>
+            <div class="tile reveal"><b>4</b><span>Quality tiers</span><p>From integrated graphics and phones up to full post-processing. The game picks one and you can change it.</p></div>
+          </div>
+          <p class="fine">{{MEM_DESKTOP_NOTE}} Desktop installers are larger than the game because they carry their own browser engine; the Android, iOS and browser versions use the one already on the device.</p>
+        </div>
+      </section>
+
+      <section class="section" id="download">
+        <div class="wrap">
+          <p class="kicker">05 <b>//</b> Download</p>
+          <h2>Pick your platform</h2>
+          <p class="lead">Every build is the same game with the same saves format. Files come straight from the latest <a href="{{REPO_URL}}/releases/latest">GitHub release</a><span id="rel-line"></span>.</p>
+          <p class="notice" id="no-release" hidden>The first public release is still building. Until it lands, play in the browser or watch the <a href="{{REPO_URL}}/releases">releases page</a>.</p>
+
+          <div class="platforms">
+            <article class="platform reveal" data-os="windows">
+              <header><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="1.5" /><path d="M8 20h8M12 16v4" /></svg><h3>Windows</h3><span class="badge">Your system</span></header>
+              <p class="req">Windows 10 or 11, 64-bit</p>
+              <a class="dl" data-asset="Cordite-Setup-win-x64.exe" href="{{DL}}/Cordite-Setup-win-x64.exe"><b>Installer</b><span>.exe, adds a Start menu entry</span><em class="size"></em></a>
+              <a class="dl" data-asset="Cordite-Portable-win-x64.exe" href="{{DL}}/Cordite-Portable-win-x64.exe"><b>Portable launcher</b><span>.exe, runs without installing</span><em class="size"></em></a>
+              <details><summary>First launch</summary><p>The build is not code-signed yet, so SmartScreen may say "Windows protected your PC". Choose <strong>More info</strong>, then <strong>Run anyway</strong>.</p></details>
+            </article>
+
+            <article class="platform reveal" data-os="mac">
+              <header><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="11" rx="1.5" /><path d="M2 19h20" /></svg><h3>macOS</h3><span class="badge">Your system</span></header>
+              <p class="req">macOS 13 or newer</p>
+              <a class="dl" data-asset="Cordite-mac-arm64.dmg" href="{{DL}}/Cordite-mac-arm64.dmg"><b>Apple Silicon</b><span>.dmg for M-series Macs</span><em class="size"></em></a>
+              <a class="dl" data-asset="Cordite-mac-x64.dmg" href="{{DL}}/Cordite-mac-x64.dmg"><b>Intel</b><span>.dmg for Intel Macs</span><em class="size"></em></a>
+              <details><summary>First launch</summary><p>The app is not notarised yet. After dragging it to Applications, open it once; when macOS blocks it, go to <strong>System Settings, Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong>. Or clear the download flag in Terminal:</p><pre><code id="mac-cmd">xattr -dr com.apple.quarantine /Applications/Cordite.app</code><button class="copy" data-copy="mac-cmd" type="button">Copy</button></pre><p>Zip builds without an installer are on the <a href="{{REPO_URL}}/releases/latest">release page</a>.</p></details>
+            </article>
+
+            <article class="platform reveal" data-os="linux">
+              <header><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="1.5" /><path d="M7 9l3 3-3 3M12 15h5" /></svg><h3>Linux</h3><span class="badge">Your system</span></header>
+              <p class="req">x86-64, any recent distribution</p>
+              <a class="dl" data-asset="Cordite-linux-x64.AppImage" href="{{DL}}/Cordite-linux-x64.AppImage"><b>AppImage</b><span>Portable launcher, no install</span><em class="size"></em></a>
+              <a class="dl" data-asset="Cordite-linux-x64.deb" href="{{DL}}/Cordite-linux-x64.deb"><b>.deb package</b><span>Debian, Ubuntu, Mint, Pop!_OS</span><em class="size"></em></a>
+              <details><summary>First launch</summary><p>Make the AppImage executable, then run it:</p><pre><code id="linux-cmd">chmod +x Cordite-linux-x64.AppImage &amp;&amp; ./Cordite-linux-x64.AppImage</code><button class="copy" data-copy="linux-cmd" type="button">Copy</button></pre></details>
+            </article>
+
+            <article class="platform reveal" data-os="android">
+              <header><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2" /><path d="M11 18.5h2" /></svg><h3>Android</h3><span class="badge">Your device</span></header>
+              <p class="req">{{ANDROID_REQ}}, phone or tablet</p>
+              <a class="dl" data-asset="Cordite-android.apk" href="{{DL}}/Cordite-android.apk"><b>APK</b><span>Touch controls and gamepads</span><em class="size"></em></a>
+              <a class="dl plain" href="./play/"><b>Or install from the browser</b><span>Open, then menu, Add to Home screen</span><em></em></a>
+              <details><summary>First launch</summary><p>Android asks before installing apps from outside the Play Store. Allow it for your browser or file manager when prompted, then open the APK again.</p></details>
+            </article>
+
+            <article class="platform reveal" data-os="ios">
+              <header><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2" /><path d="M10 5.5h4" /></svg><h3>iPhone and iPad</h3><span class="badge">Your device</span></header>
+              <p class="req">iOS or iPadOS 15 or newer</p>
+              <a class="dl plain" href="./play/"><b>Install from Safari</b><span>Open, then Share, Add to Home Screen</span><em>full screen, offline</em></a>
+              <a class="dl" data-asset="Cordite-ios-unsigned.ipa" href="{{DL}}/Cordite-ios-unsigned.ipa"><b>Unsigned .ipa</b><span>For sideloading with your own Apple ID</span><em class="size"></em></a>
+              <details><summary>Why two options</summary><p>Apple only installs apps signed by a paid developer account, and this project does not have one yet. The Home Screen version is the full game and needs nothing else. The .ipa is the native app, unsigned, for testers who sign it themselves with a sideloading tool or Xcode.</p></details>
+            </article>
+
+            <article class="platform reveal" data-os="web">
+              <header><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18" /></svg><h3>Any browser</h3><span class="badge">No install</span></header>
+              <p class="req">Chrome, Edge, Firefox or Safari with WebGL 2</p>
+              <a class="dl plain" href="./play/"><b>Play now</b><span>Runs in this tab, saves on this device</span><em>{{GAME_SIZE}}</em></a>
+              <a class="dl" data-asset="Cordite-web.zip" href="{{DL}}/Cordite-web.zip"><b>Web build .zip</b><span>Host it yourself or run it offline</span><em class="size"></em></a>
+              <details><summary>Running the zip</summary><p>Unzip it and start any static file server in the folder, for example <code>python3 -m http.server</code> or <code>npx serve</code>, then open the address it prints. The repository's <code>launchers</code> folder has one-click scripts that do this for you.</p></details>
+            </article>
+          </div>
+          <p class="fine">Checksums for every file are published with each release in <code>SHA256SUMS.txt</code>.</p>
+        </div>
+      </section>
+
+      <section class="section alt" id="testers">
+        <div class="wrap">
+          <p class="kicker">06 <b>//</b> Testers</p>
+          <h2>Help break it</h2>
+          <p class="lead">CORDITE is in open testing. The fastest route to a fix is a build, a few minutes of play and a short report.</p>
+          <div class="steps">
+            <div class="step reveal"><b>1</b><h3>Grab a launcher</h3><p>The portable Windows build, the Linux AppImage, the macOS zip and the browser version all run without installing anything. Unfinished builds from every commit are attached to the <a href="{{REPO_URL}}/actions">Actions runs</a>.</p></div>
+            <div class="step reveal"><b>2</b><h3>Turn on the tester tools</h3><p>In the game, open <strong>Settings</strong>, then <strong>Tester</strong>: invulnerability, bottomless magazines, unlock every chapter, a performance readout and a button that completes the current objective.</p></div>
+            <div class="step reveal"><b>3</b><h3>Tell us what happened</h3><p>Open a <a href="{{REPO_URL}}/issues/new/choose">bug report</a>. The form asks for the build, your device and the chapter, which is usually all it takes to reproduce a problem.</p></div>
+          </div>
+          <div class="tester-links">
+            <a class="btn ghost" href="{{REPO_URL}}/issues/new/choose">Report a bug</a>
+            <a class="btn ghost" href="{{REPO_URL}}/blob/main/docs/TESTING.md">Testing guide</a>
+            <a class="btn ghost" href="{{REPO_URL}}">Source on GitHub</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">
+        <a class="nav-brand" href="#top" aria-label="Cordite, back to top">CORD<i class="round"></i>TE</a>
+        <p>CORDITE is a work of fiction. Its story, places, organisations and characters are invented. Weapon names are used only to identify the real designs they describe; the project is not affiliated with, sponsored by or endorsed by any manufacturer, and no manufacturer artwork is used.</p>
+        <p>Free software under the <a href="{{REPO_URL}}/blob/main/LICENSE">MIT licence</a>. The game makes no network requests and collects nothing. This page asks GitHub once for the latest release so it can show file sizes.</p>
+        <p class="mono">v{{VERSION}} <b>//</b> © {{YEAR}} Bassman8K <b>//</b> <a href="{{REPO_URL}}">github.com/{{REPO}}</a></p>
+      </div>
+    </footer>
+
+    <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Screenshot">
+      <button class="lb-close" type="button" aria-label="Close">Close</button>
+      <button class="lb-nav prev" type="button" aria-label="Previous screenshot">&#8249;</button>
+      <figure><img alt="" id="lb-img" /><figcaption id="lb-cap"></figcaption></figure>
+      <button class="lb-nav next" type="button" aria-label="Next screenshot">&#8250;</button>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

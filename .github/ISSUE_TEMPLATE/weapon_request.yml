@@ -1,0 +1,20 @@
+name: Weapon request
+description: Ask for a weapon that is not in the armory yet, or correct the figures for one that is.
+labels: [weapons]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Weapon
+      placeholder: Full designation, for example "Beretta ARX160"
+    validations:
+      required: true
+  - type: textarea
+    id: specs
+    attributes:
+      label: Specifications
+      description: Calibre, weight, overall and barrel length, rate of fire, muzzle velocity and magazine capacity if you know them, with a source.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes

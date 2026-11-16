@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check, build and smoke-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Type-check
+        run: npm run typecheck
+      - name: Tests (weapon data, every chapter's layout and objectives)
+        run: npm test
+      - name: Build the game
+        run: npm run build
+      - name: Build the website
+        run: npm run site
+      - name: Smoke-test the desktop app (boots, plays chapter 1, screenshots)
+        run: xvfb-run -a npx electron . --no-sandbox --smoke-test=smoke --software-gl
+      - name: Smoke-test summary
+        if: always()
+        run: |
+          if [ -f smoke/result.json ]; then
+            node -e "const r = require('./smoke/result.json'); console.log(JSON.stringify({ ok: r.ok, version: r.version, weapons: r.weapons, chapters: r.chapters, game: r.game, memoryMB: r.memoryMB, errors: r.errors }, null, 2));"
+          else
+            echo "No smoke-test result was written."
+          fi
+      - name: Keep the smoke-test screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-test
+          path: |
+            smoke/*.png
+            smoke/result.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Keep the web build for testers
+        uses: actions/upload-artifact@v7
+        with:
+          name: cordite-web
+          path: dist
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,6 @@
+{
+  "drawCalls": "80–250",
+  "memHeap": "30–70 MB",
+  "memHeapNote": "The game's own heap while playing, from Low to High quality. Chapters release what they loaded when they end.",
+  "memDesktopNote": "Measured in play on an Apple-silicon MacBook (chapter 4, 1440 × 810 window): the whole desktop app, engine and graphics process included, used about 0.5 GB on Low and 0.7 GB on High. An empty window of the same engine showing a blank 3D canvas uses 0.24 GB."
+}
