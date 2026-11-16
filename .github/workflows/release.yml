@@ -204,11 +204,12 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           pattern: release-*
-          path: assets
+          # Not "assets": the repository has a folder of that name and its files would be published too.
+          path: release-files
           merge-multiple: true
       - name: Checksums
         run: |
-          cd assets
+          cd release-files
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
       - name: Create or update the release
@@ -216,7 +217,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" assets/* --clobber
+            gh release upload "$TAG" release-files/* --clobber
           else
-            gh release create "$TAG" assets/* --verify-tag --title "Cordite ${TAG}" --notes-file .github/release-notes.md
+            gh release create "$TAG" release-files/* --verify-tag --title "Cordite ${TAG}" --notes-file .github/release-notes.md
           fi
