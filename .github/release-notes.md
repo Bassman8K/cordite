@@ -1,3 +1,5 @@
+**New in 0.3.1.** The story is re-voiced with more natural voices, played at their true pitch, and the villain now speaks throughout: Major Rusk has 26 lines across all six chapters, on the enemy's radio, over loudspeakers and to your face in the last fight.
+
 **New in 0.3.0.** You now go in with a squad: Merlin and Shrike follow you, fight beside you and cannot be killed (Settings, Game, Squad turns them off). Every firearm now fires a recording of the real weapon, one set per cartridge (9 mm, .45, 5.56, 7.62×39, 7.62 NATO, .30-06, .50 BMG and more). The story is spoken aloud over the radio. Soldiers call out far more often, in two voices. Reloads, footsteps, bullet impacts, fly-bys and grenades are recordings, and walls and ground are photographs of the real material. The game grows from 2.7 MB to about 10 MB.
 
 Pick the file for your system, or let the [website](https://bassman8k.github.io/cordite/) choose for you.

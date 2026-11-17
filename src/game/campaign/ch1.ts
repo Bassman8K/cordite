@@ -297,6 +297,9 @@ export const ch1: ChapterDef = {
         m.radio('KESTREL', 'Container is empty. They moved it.', 0.3);
         m.radio('OVERWATCH', 'Then it is already at sea, and they know you are there. Their reaction force is rolling out of the west warehouse.', 3);
         m.radio('OVERWATCH', 'Kill the mast behind that warehouse before they call the freighter back. There is a resupply crate inside.', 8);
+        m.radio('OVERWATCH', 'I am into their command net. You will hear what I hear.', 16);
+        m.radio('RUSK', 'This is Rusk. There is a thief on my dock. Shut the gates, and bring me what is left of him.', 20);
+        m.radio('RUSK', 'He is going for the mast. Protect it, or explain to me why you did not.', 42);
       },
       exit: (m) => {
         m.explodeAt('mast', 8, 400);

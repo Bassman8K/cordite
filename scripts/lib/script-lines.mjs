@@ -2,7 +2,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const CALL = /\.radio\(\s*'([A-Z]+)',\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`([^`]*)`)/g;
+// A line is either said on the spot, `m.radio('WHO', 'text', ...)`, or kept in a list as `line('WHO', 'text')`.
+const CALL = /(?:\.radio|\bline)\(\s*'([A-Z]+)',\s*(?:'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`([^`]*)`)/g;
 
 /** Every `radio(who, text)` line in the campaign, in chapter order. */
 export function scriptLines(root) {
@@ -10,7 +11,7 @@ export function scriptLines(root) {
   const lines = [];
   for (const file of readdirSync(dir).filter((f) => /^ch\d+\.ts$/.test(f)).sort()) {
     const source = readFileSync(join(dir, file), 'utf8');
-    const calls = (source.match(/\.radio\(/g) ?? []).length;
+    const calls = (source.match(/\.radio\(|\bline\(/g) ?? []).length;
     let found = 0;
     for (const m of source.matchAll(CALL)) {
       found++;
@@ -18,7 +19,7 @@ export function scriptLines(root) {
       lines.push({ chapter: file.replace('.ts', ''), who: m[1], text, key: lineKey(m[1], text) });
     }
     // A line built from variables cannot be voiced ahead of time; fail loudly rather than ship it silent.
-    if (found !== calls) throw new Error(`${file}: ${calls} radio() calls but only ${found} are plain text`);
+    if (found !== calls) throw new Error(`${file}: ${calls} radio() or line() calls but only ${found} are plain text`);
   }
   return lines;
 }
@@ -53,10 +54,13 @@ export const STOCK = {
   hurry: ['You are running out of time, Kestrel.', 'Clock is against you. Move.'],
 };
 
-/** Who speaks with which voice. All four voices were released into the public domain by their speakers. */
+/**
+ * Who speaks with which voice. The voices are Kokoro's (Apache 2.0); a blend mixes two of them into
+ * a voice of its own. `speed` is the pace: the villain takes his time, the frightened contact does not.
+ */
 export const CAST = {
-  OVERWATCH: { model: 'en_GB-cori-high', length: 0.97, pause: 0.24 },
-  KESTREL: { model: 'en_US-joe-medium', length: 1.0, pause: 0.22 },
-  WREN: { model: 'en_US-kristin-medium', length: 0.93, pause: 0.18 },
-  RUSK: { model: 'en_US-norman-medium', length: 1.13, pause: 0.34 },
+  OVERWATCH: { voice: 'bf_emma', lang: 'en-gb', speed: 1 },
+  KESTREL: { voice: 'am_michael', lang: 'en-us', speed: 1 },
+  WREN: { voice: 'af_heart', lang: 'en-us', speed: 1.08 },
+  RUSK: { voice: { bm_lewis: 0.7, bm_fable: 0.3 }, lang: 'en-gb', speed: 0.88 },
 };

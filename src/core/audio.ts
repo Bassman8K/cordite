@@ -713,8 +713,14 @@ const HIT_BY_SURFACE: Record<Surface, string> = {
 };
 
 export interface PlayOpts {
-  /** Play through a radio: band-limited, as heard over a headset. */
-  radio?: boolean;
+  /**
+   * Heard through something rather than directly. `true` (or 'comms') is the player's own radio; 'net'
+   * is an enemy channel being listened in on, narrower and harsher; 'pa' is a loudspeaker, with the
+   * words coming back off the walls.
+   */
+  radio?: boolean | 'comms' | 'net' | 'pa';
+  /** Play at exactly the recorded speed. Speech is; effects vary a little so repeats are not identical. */
+  steady?: boolean;
   vol?: number;
   rate?: number;
   /** World position: makes the sound positional. */
@@ -757,6 +763,7 @@ class AudioSys {
   private pending = new Map<string, Promise<void>>();
   private wanted = new Set<string>();
   private leads = new WeakMap<AudioBuffer, number>();
+  private raspCurve: Float32Array<ArrayBuffer> | null = null;
   private loops: Loop[] = [];
   private voices = 0;
   private lx = 0;
@@ -974,7 +981,7 @@ class AudioSys {
     const buf = this.samples.get(name);
     if (!c || c.state !== 'running' || !buf) return 0;
     const seconds = buf.duration - (this.leads.get(buf) ?? 0);
-    this.play(name, { bus: 'ui', ...o });
+    this.play(name, { bus: 'ui', steady: true, ...o });
     const t = c.currentTime + (o.delay ?? 0);
     const level = store.settings.sfx;
     this.sfx.gain.cancelScheduledValues(t);
@@ -1023,21 +1030,43 @@ class AudioSys {
     if (!buf) return;
     const src = c.createBufferSource();
     src.buffer = buf;
-    src.playbackRate.value = (o.rate ?? 1) * (0.96 + Math.random() * 0.08);
+    src.playbackRate.value = (o.rate ?? 1) * (o.steady ? 1 : 0.96 + Math.random() * 0.08);
     const gain = c.createGain();
     let vol = o.vol ?? 1;
     let node: AudioNode = src;
-    if (o.radio) {
-      // Heard over a headset: only the narrow band a radio carries.
+    const through = o.radio === true ? 'comms' : o.radio || '';
+    if (through) {
+      // Only the band a radio or a horn loudspeaker carries.
+      const [lo, hi] = through === 'net' ? [520, 2500] : through === 'pa' ? [380, 3600] : [300, 3400];
       const low = c.createBiquadFilter();
       low.type = 'highpass';
-      low.frequency.value = 430;
+      low.frequency.value = lo;
       const high = c.createBiquadFilter();
       high.type = 'lowpass';
-      high.frequency.value = 3000;
+      high.frequency.value = hi;
       node.connect(low);
       low.connect(high);
       node = high;
+      if (through === 'net') {
+        // A weak signal pulled in by a scanner: the loud parts flatten and rasp.
+        const shaper = c.createWaveShaper();
+        shaper.curve = this.rasp();
+        node.connect(shaper);
+        node = shaper;
+      } else if (through === 'pa') {
+        // The same words again a moment later, off the far wall, and fainter after that.
+        const mix = c.createGain();
+        const echo = c.createDelay(0.5);
+        echo.delayTime.value = 0.13;
+        const back = c.createGain();
+        back.gain.value = 0.32;
+        node.connect(mix);
+        node.connect(echo);
+        echo.connect(back);
+        back.connect(echo);
+        back.connect(mix);
+        node = mix;
+      }
     }
     const positional = o.x !== undefined;
     let dist = 0;
@@ -1076,10 +1105,26 @@ class AudioSys {
     this.voices++;
     src.onended = () => {
       this.voices--;
-      gain.disconnect();
+      // A loudspeaker's echo is still dying away when the words end.
+      if (through === 'pa') setTimeout(() => gain.disconnect(), 1400);
+      else gain.disconnect();
     };
     // Sound takes time to travel: far shots are heard late.
     src.start(c.currentTime + (o.delay ?? 0) + (positional ? Math.min(0.6, dist / 343) : 0), this.leads.get(buf) ?? 0);
+  }
+
+  /** The transfer curve that roughens an intercepted voice (built once). */
+  private rasp(): Float32Array<ArrayBuffer> {
+    if (!this.raspCurve) {
+      const n = 1024;
+      const curve = new Float32Array(new ArrayBuffer(n * 4));
+      for (let i = 0; i < n; i++) {
+        const x = (i / (n - 1)) * 2 - 1;
+        curve[i] = Math.tanh(x * 3.2) / Math.tanh(3.2);
+      }
+      this.raspCurve = curve;
+    }
+    return this.raspCurve;
   }
 
   /** Rate-limited play, for sounds that could fire many times a frame (impacts, casings). */

@@ -235,6 +235,7 @@ export const ch4: ChapterDef = {
       enter: (m) => {
         m.spawn('aa');
         m.radio('OVERWATCH', 'That will be seen from orbit. Now the guns: one each end of the runway, north side. They have rockets up there too.', 1.5);
+        m.radio('RUSK', 'That smoke is my fuel. Get the aircraft up now, with whatever is left in its tanks.', 11);
       },
     },
     {
@@ -245,6 +246,7 @@ export const ch4: ChapterDef = {
         m.sound('rotor', 'plane-eng1', 0.7);
         m.timer('Aircraft departs', 150, () => m.fail('The aircraft took off with LANTERN aboard.'));
         m.radio('OVERWATCH', 'Guns are down, and they know it. The aircraft is spinning up. Four engines, under the wings. Kill all four.', 0.6);
+        m.radio('RUSK', 'Kestrel. Yes, I have your name now. You are becoming an expensive habit.', 10);
       },
       exit: (m) => {
         m.clearTimer();
@@ -272,6 +274,7 @@ export const ch4: ChapterDef = {
         m.spawn('last');
         m.after(1, () => m.alert('last'));
         m.radio('OVERWATCH', 'You have the pass. Blockhouse at the far west end, past both hangars. The yellow door.', 0.8);
+        m.radio('RUSK', 'He has the lift pass. Seal the bunker. If he wants LANTERN, let him dig for it.', 9);
       },
     },
   ],

@@ -16,7 +16,7 @@ A private army has stolen LANTERN, a package that turns any guided weapon agains
 - **Enemies that fight back.** They patrol, investigate noise, take cover, flank, suppress and call for help, out loud: two recorded voice actors shout "Target engaged", "Reloading", "Fire in the hole" and "Medic", and a squad keeps talking for as long as the fight lasts.
 - **A squad at your shoulder.** Merlin and Shrike follow your lead, hold their fire until the shooting starts, then fight beside you and draw their share of the enemy's. They cannot be killed. Turn them off in Settings to go in alone.
 - **Weapons that sound like themselves.** Gunfire is cut from recordings of the real weapons, one set per cartridge: a Glock, a 1911, an M4, an AK-47, a SCAR-H, an M1 Garand, a Mosin-Nagant, a .50 BMG, a Browning M2 and more. Reloads, footsteps, bullet impacts, fly-bys and grenades are recordings too. Nothing is synthesised gunfire.
-- **A spoken story.** Every line your controller, your contact and the man you are hunting say is spoken aloud over the radio, with subtitles.
+- **A spoken story, and a villain who talks back.** Every line is spoken aloud, with subtitles. Major Rusk is in your ear from the first alarm: on the enemy's radio net as your controller listens in, over the loudspeakers of his bunker and his fortress, and to your face in the last fight.
 - **Photographed surfaces.** Concrete, brick, plaster, rock, sand, snow and steel are photographs of the real material. The worlds built from them, the soldiers and all 460 weapon models are still generated in code when a chapter loads, which is why the whole game is about 10 MB.
 - **Everywhere.** Windows, macOS, Linux, Android, iPhone and iPad from one codebase, plus any modern browser. Keyboard and mouse, gamepad or touch.
 
@@ -136,7 +136,7 @@ The code is [MIT](LICENSE). The recorded audio in `public/audio` and the photogr
 
 - Gunfire, reloads, footsteps, impacts, explosions and weather: field recordings shared on [Freesound](https://freesound.org) and OpenGameArt, nearly all in the public domain (CC0). Many are by areniporgen, who records individual weapons, and by qubodup, who cuts them from public-domain US military footage. Three are [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (areniporgen: Smith & Wesson M&P 9, SIG Sauer SIG716, Motorola PTT), and the SKS, Mosin-Nagant and one shotgun are © 2009 Vincent Sevedge, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Changes: single events cut out, rumble removed, levels matched.
 - Soldiers' voices: Kenney Voiceover Pack (kenney.nl), male voice Jeffrey M. Smith. CC0. Pain and death sounds: "Male Grunt/Yelling sounds" by megaboots. CC0.
-- Story dialogue: spoken by [Piper](https://github.com/OHF-Voice/piper1-gpl), a neural voice that runs offline, using four voices their speakers released into the public domain. These are computer voices modelled on real people, not performances by actors; the script is in `src/game/campaign` if you would like to record it yourself.
+- Story dialogue: spoken by [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) (Apache 2.0), a neural voice that runs offline. These are computer voices, not performances by actors; the script is in `src/game/campaign` if you would like to record it yourself.
 - Surfaces: [ambientCG](https://ambientcg.com) by Lennart Demes and contributors. CC0.
 
 `scripts/make-audio.mjs`, `scripts/make-speech.mjs` and `scripts/make-textures.mjs` rebuild all of it from the originals.

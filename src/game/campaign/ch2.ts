@@ -202,6 +202,7 @@ export const ch2: ChapterDef = {
         m.spawn('street1');
         m.radio('OVERWATCH', 'You are at the south end of the Mile. Hotel Meridian is the tall cream block at the far end. Corvane is dug in between.', 1.2);
         m.radio('WREN', 'Whoever you are, hurry. They are going door to door.', 8);
+        m.radio('RUSK', 'Rusk to all units on the Mile. The man from the docks is in your street. He wants the woman in the hotel. Reach her first.', 16);
       },
     },
     {
@@ -249,6 +250,7 @@ export const ch2: ChapterDef = {
           m.spawn('wave2');
           m.alert('wave2');
           m.radio('OVERWATCH', 'Second group coming down the boulevard, heavy weapon with them.', 0);
+          m.radio('RUSK', 'She has my file. Burn the lobby if you must. Nobody walks out with it.', 9);
         });
         m.after(60, () => {
           m.spawn('wave3');
@@ -266,6 +268,7 @@ export const ch2: ChapterDef = {
         m.after(1.5, () => m.alert('chasers'));
         m.radio('WREN', 'Done. I have it. Service door, north wall. Go, go.', 0.4);
         m.radio('OVERWATCH', 'File names the handover: a relay station on the Orlov Pass. That is where LANTERN gets its eyes.', 7);
+        m.radio('RUSK', 'You let him leave with it. I am keeping a list of the people who disappoint me.', 17);
       },
     },
   ],

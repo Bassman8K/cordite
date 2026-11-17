@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { lineKey } from '../core/audio';
 import { formatTime } from '../core/math';
-import type { ChapterDef, Cond, StageDef } from './campaign/types';
+import type { ChapterDef, Cond, Spoken, StageDef } from './campaign/types';
 import type { Game } from './game';
 
 interface Timer {
@@ -13,9 +13,21 @@ interface Timer {
   fn: () => void;
 }
 interface Watch {
-  zone: string;
+  /** Fires when the player enters this zone... */
+  zone?: string;
+  /** ...or when this becomes true. */
+  test?: () => boolean;
   fn: () => void;
 }
+
+/**
+ * How a line reaches the player: over his own radio ('comms'), from an enemy channel being listened
+ * in on ('net'), from a loudspeaker ('pa'), in his own voice ('self'), or out of the mouth of the
+ * soldier with a given tag ('@rusk'), heard from wherever that soldier is standing.
+ */
+export type Via = 'comms' | 'net' | 'pa' | 'self' | `@${string}`;
+/** How each speaker is heard unless a line says otherwise. */
+const HEARD: Record<string, Via> = { KESTREL: 'self', RUSK: 'net' };
 interface Line {
   who: string;
   text: string;
@@ -23,6 +35,7 @@ interface Line {
   /** The recording of this line, and how long it has been kept waiting for that recording to load. */
   key: string;
   held: number;
+  via: Via;
 }
 
 export class Mission {
@@ -39,6 +52,8 @@ export class Mission {
   private lines: Line[] = [];
   private lineBusy = 0;
   private lastLine = '';
+  private voiceFrom = new THREE.Vector3();
+  private met = new Set<string>();
   private clock = 0;
   private countdown: { label: string; t: number; fn: () => void; hurried?: boolean } | null = null;
   private lastNote = '';
@@ -96,12 +111,15 @@ export class Mission {
     return this.game.squad.list.length > 0;
   }
 
-  radio(who: string, text: string, delay = 0): void {
+  radio(who: string, text: string, delay = 0, via: Via = HEARD[who] ?? 'comms'): void {
     if (this.silent) return;
     const key = lineKey(who, text);
     // Dialogue is fetched when it is about to be needed, not held in memory for the whole game.
     this.game.audio.prepare(key);
-    this.lines.push({ who, text, at: this.clock + delay, key, held: 0 });
+    // Someone speaking in person may be dead by the time the words come: note where he is now.
+    const speaker = via.startsWith('@') ? this.game.enemies.byTag(via.slice(1)) : undefined;
+    if (speaker) this.voiceFrom.set(speaker.pos.x, speaker.pos.y + 1.6, speaker.pos.z);
+    this.lines.push({ who, text, at: this.clock + delay, key, held: 0, via });
     this.lines.sort((a, b) => a.at - b.at);
   }
 
@@ -120,10 +138,49 @@ export class Mission {
     this.timers.push({ t: seconds, fn });
   }
 
+  /** Speaks a line kept in a list (see `line` in campaign/types). */
+  speak(l: Spoken, delay = 0, via?: Via): void {
+    this.radio(l.who, l.text, delay, via);
+  }
+
   /** Runs `fn` the first time the player enters a zone during this stage. */
   onZone(zone: string, fn: () => void): void {
     if (this.silent) return;
     this.watches.push({ zone, fn });
+  }
+
+  /** Runs `fn` once, the first time `test` is true during this stage. */
+  when(test: () => boolean, fn: () => void): void {
+    if (this.silent) return;
+    this.watches.push({ test, fn });
+  }
+
+  /** Runs `fn` every `seconds` for the rest of this stage. */
+  every(seconds: number, fn: () => void): void {
+    this.after(seconds, () => {
+      fn();
+      this.every(seconds, fn);
+    });
+  }
+
+  /** How much of his strength the soldier with this tag has left: 1 unhurt (or not yet arrived), 0 dead. */
+  health(tag: string): number {
+    const e = this.game.enemies.byTag(tag);
+    if (e) this.met.add(tag);
+    // Once dead he is cleared away, so "not there" means dead only for someone who has been seen.
+    if (!e) return this.met.has(tag) ? 0 : 1;
+    return e.alive ? Math.max(0, e.hp / e.arch.hp) : 0;
+  }
+
+  /** True while the soldier with this tag is alive and in the fight. */
+  fighting(tag: string): boolean {
+    const e = this.game.enemies.byTag(tag);
+    return !!e && e.alive && e.state === 'combat';
+  }
+
+  /** True when nobody is waiting to speak. */
+  get quiet(): boolean {
+    return this.lines.length === 0 && this.lineBusy <= 0;
   }
 
   lights(group: string, on: boolean): void {
@@ -292,11 +349,23 @@ export class Mission {
       if (g.audio.loading(due.key) && due.held < 1.5) due.held += dt;
       else {
         this.lines.shift();
-        // Kestrel is the player: his own voice is heard directly, everyone else over the radio.
-        const own = due.who === 'KESTREL';
-        if (!own) g.audio.play('radio', { vol: 0.7, bus: 'ui' });
-        const said = g.audio.speak(due.key, { radio: !own, vol: own ? 0.85 : 1, delay: own ? 0 : 0.18 });
-        if (said && !own) g.audio.play('radioEnd', { vol: 0.5, bus: 'ui', delay: 0.18 + said + 0.06 });
+        const via = due.via;
+        let said = 0;
+        if (via.startsWith('@')) {
+          // Said in person: heard from where the speaker stands (or last stood).
+          const e = g.enemies.byTag(via.slice(1));
+          if (e) this.voiceFrom.set(e.pos.x, e.pos.y + 1.6, e.pos.z);
+          said = g.audio.speak(due.key, { x: this.voiceFrom.x, y: this.voiceFrom.y, z: this.voiceFrom.z, ref: 34, vol: 1.3, reverb: 0.32 });
+        } else if (via === 'self') {
+          // Kestrel is the player: his own voice, heard directly.
+          said = g.audio.speak(due.key, { vol: 0.85 });
+        } else if (via === 'pa') {
+          said = g.audio.speak(due.key, { radio: 'pa', vol: 1, reverb: 0.4 });
+        } else {
+          g.audio.play('radio', { vol: via === 'net' ? 0.45 : 0.7, bus: 'ui' });
+          said = g.audio.speak(due.key, { radio: via === 'net' ? 'net' : 'comms', vol: 1, delay: 0.18 });
+          if (said && via === 'comms') g.audio.play('radioEnd', { vol: 0.5, bus: 'ui', delay: 0.18 + said + 0.06 });
+        }
         const read = 1.6 + due.text.length * 0.048;
         this.lineBusy = said ? said + 0.8 : read;
         g.events.emit('radio', { who: due.who, text: due.text, seconds: said ? said + 1 : 0 });
@@ -316,7 +385,7 @@ export class Mission {
     if (g.level) {
       for (let i = this.watches.length - 1; i >= 0; i--) {
         const w = this.watches[i];
-        if (g.level.inZone(w.zone, g.player.pos.x, g.player.pos.z)) {
+        if (w.test ? w.test() : g.level.inZone(w.zone as string, g.player.pos.x, g.player.pos.z)) {
           this.watches.splice(i, 1);
           w.fn();
         }
@@ -328,7 +397,7 @@ export class Mission {
       if (this.countdown.t < 20 && !this.countdown.hurried) {
         this.countdown.hurried = true;
         g.audio.play('radio', { vol: 0.5, bus: 'ui' });
-        g.audio.say(['hq_hurry'], { radio: true, bus: 'ui', vol: 1, delay: 0.18 });
+        g.audio.say(['hq_hurry'], { radio: true, bus: 'ui', vol: 1, delay: 0.18, steady: true });
       }
       if (this.countdown.t <= 0) {
         const fn = this.countdown.fn;
@@ -361,7 +430,7 @@ export class Mission {
       }
       g.audio.play('objective', { vol: 0.7 });
       g.audio.play('radio', { vol: 0.5, delay: 0.3, bus: 'ui' });
-      g.audio.say(['hq_objective'], { radio: true, bus: 'ui', vol: 0.95, delay: 0.48 });
+      g.audio.say(['hq_objective'], { radio: true, bus: 'ui', vol: 0.95, delay: 0.48, steady: true });
       this.enter(next);
       g.saveCheckpoint(next);
     }

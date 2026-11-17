@@ -309,7 +309,7 @@ export class Game {
     this.failReason = reason;
     this.stats.deaths++;
     audio.play('fail', { vol: 0.6 });
-    audio.say(['hq_failed'], { radio: true, bus: 'ui', vol: 1, delay: 0.7 });
+    audio.say(['hq_failed'], { radio: true, bus: 'ui', vol: 1, delay: 0.7, steady: true });
     this.setState('failed');
   }
 
@@ -341,7 +341,7 @@ export class Game {
     audio.setIntensity(0);
     audio.play('objective', { vol: 0.9 });
     audio.play('radio', { vol: 0.6, delay: 0.5, bus: 'ui' });
-    audio.say(['hq_complete'], { radio: true, bus: 'ui', vol: 1, delay: 0.68 });
+    audio.say(['hq_complete'], { radio: true, bus: 'ui', vol: 1, delay: 0.68, steady: true });
     this.after(1.6, () => this.setState('complete'));
   }
 

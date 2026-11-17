@@ -201,6 +201,7 @@ export const ch5: ChapterDef = {
       enter: (m) => {
         m.spawn('entry', 'sec', 'barracks');
         m.radio('OVERWATCH', 'Signal is weak down there. Security station is north of the lift, at the junction. Every door past it is locked from that room.', 1.2);
+        m.radio('RUSK', 'Attention, all staff. There is an intruder below ground. Security will shoot on sight. Stay out of their way.', 11, 'pa');
       },
     },
     {
@@ -223,6 +224,7 @@ export const ch5: ChapterDef = {
         m.enable('core');
         m.spawn('labs');
         m.radio('OVERWATCH', 'Lab door is open, east side. Vault is at the back of the laboratories, past the server racks.', 0.6);
+        m.radio('RUSK', 'You are in my vault, Kestrel. Look around you. Everything in that room was bought and paid for.', 14, 'pa');
       },
       exit: (m) => {
         m.openDoor('door2');
@@ -254,6 +256,7 @@ export const ch5: ChapterDef = {
         m.after(1, () => m.alert('escape', 'chase'));
         m.timer('Detonation', 80, () => m.fail('You were still inside when the charge went off.'));
         m.radio('OVERWATCH', 'Charge is armed. Eighty seconds. West door of the chamber, then follow the tunnel north to the green light. Run.', 0.4);
+        m.radio('RUSK', 'You would bury it? Then the last one sells for double. Run, little bird.', 10, 'pa');
       },
       exit: (m) => {
         m.clearTimer();

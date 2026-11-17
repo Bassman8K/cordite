@@ -1,36 +1,35 @@
-// Speaks the story's radio lines with Piper (https://github.com/OHF-Voice/piper1-gpl), an offline
-// neural voice, and leaves one WAV per line in <folder>/speech/ for scripts/make-audio.mjs to pack.
+// Speaks the story's lines with Kokoro, an offline neural voice (model Apache 2.0, see speak.py),
+// and leaves one WAV per line in <folder>/speech/ for scripts/make-audio.mjs to pack.
 //
-//   PIPER=/path/to/piper VOICES=/folder/with/the/.onnx/files node scripts/make-speech.mjs <folder>
+//   PYTHON=/path/to/python KOKORO=/folder/with/the/model node scripts/make-speech.mjs <folder>
 //
-// Voices (rhasspy/piper-voices on Hugging Face), each released into the public domain by its speaker:
-//   en_GB-cori-high, en_US-joe-medium, en_US-kristin-medium, en_US-norman-medium
+// PYTHON is an interpreter with `kokoro-onnx` and `soundfile` installed. KOKORO holds
+// kokoro-v1.0.onnx and voices-v1.0.bin from https://github.com/thewh1teagle/kokoro-onnx/releases.
+// Lines already spoken are kept: delete <folder>/speech to speak everything again.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CAST, STOCK, scriptLines, spoken } from './lib/script-lines.mjs';
 
-const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const here = dirname(fileURLToPath(import.meta.url));
+const root = join(here, '..');
 const folder = process.argv[2];
-const PIPER = process.env.PIPER || 'piper';
-const VOICES = process.env.VOICES;
-if (!folder || !VOICES) throw new Error('usage: PIPER=/path/to/piper VOICES=/folder/with/voices node scripts/make-speech.mjs <folder>');
+const PYTHON = process.env.PYTHON || 'python3';
+const KOKORO = process.env.KOKORO;
+if (!folder || !KOKORO) throw new Error('usage: PYTHON=/path/to/python KOKORO=/folder/with/the/model node scripts/make-speech.mjs <folder>');
 const out = join(folder, 'speech');
 mkdirSync(out, { recursive: true });
 
-let made = 0;
 const lines = scriptLines(root);
 for (const [name, texts] of Object.entries(STOCK)) texts.forEach((text, i) => lines.push({ who: 'OVERWATCH', text, key: `hq_${name}_${i}` }));
-for (const l of lines) {
-  const file = join(out, `${l.key}.wav`);
-  if (existsSync(file) && statSync(file).size > 2000) continue;
+const jobs = lines.map((l) => {
   const cast = CAST[l.who];
   if (!cast) throw new Error(`no voice cast for ${l.who}`);
-  const model = join(VOICES, `${cast.model}.onnx`);
-  if (!existsSync(model)) throw new Error(`voice not found: ${model}`);
-  const r = spawnSync(PIPER, ['-m', model, '-f', file, '--length-scale', String(cast.length), '--sentence-silence', String(cast.pause)], { input: `${spoken(l.text)}\n`, maxBuffer: 1 << 26 });
-  if (r.status !== 0 || !existsSync(file)) throw new Error(`piper failed on "${l.text}": ${String(r.stderr).slice(-300)}`);
-  made++;
-}
-console.log(`speech: ${lines.length} lines, ${made} newly spoken -> ${out}`);
+  return { key: l.key, text: spoken(l.text), ...cast };
+});
+const list = join(out, 'jobs.json');
+writeFileSync(list, JSON.stringify(jobs, null, 1));
+const r = spawnSync(PYTHON, [join(here, 'speak.py'), list, KOKORO, out], { stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 26 });
+if (r.status !== 0) throw new Error(`speaking failed: ${String(r.stderr).slice(-600)}`);
+console.log(`speech: ${lines.length} lines, ${String(r.stdout).trim()} -> ${out}`);

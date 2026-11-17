@@ -1,7 +1,8 @@
 import type { LevelBuilder } from '../../world/builder';
 import type { RGB } from '../../world/geo';
 import { ammoCrate, apc, barrels, C, consoleDesk, crate, crateCluster, crater, door, explosiveBarrel, fence, floodlight, generator, heli, helipad, house, jersey, lamp, pallet, rock, rubble, sandbags, table, tent, truck } from '../../world/props';
-import { kill, reach, survive, use, type ChapterDef } from './types';
+import type { Mission } from '../mission';
+import { kill, line, reach, survive, use, type ChapterDef } from './types';
 
 const PI = Math.PI;
 const STONE: RGB = [0.6, 0.58, 0.54];
@@ -178,6 +179,21 @@ function build(b: LevelBuilder): void {
   wave('pad', [['elite', -40, -44], ['eliterusher', -24, -58], ['elite', -44, -58]]);
 }
 
+/** What Rusk says in the lulls of the last fight, in this order. */
+const TAUNTS = [
+  line('RUSK', 'Come out, Kestrel. I am paying these men by the hour.'),
+  line('RUSK', 'You are bleeding on my floor.'),
+  line('RUSK', 'I have buried better soldiers than you, and sent the invoice to their governments.'),
+  line('RUSK', 'Whoever sent you will sell you too. Everybody has a price.'),
+];
+/** He dies once; he says this once. */
+let lastWordsFor: Mission | null = null;
+function lastWords(m: Mission): void {
+  if (lastWordsFor === m) return;
+  lastWordsFor = m;
+  m.radio('RUSK', 'It was only business.', 0.3, '@rusk');
+}
+
 export const ch6: ChapterDef = {
   id: 'last-light',
   n: 6,
@@ -218,8 +234,8 @@ export const ch6: ChapterDef = {
         m.spawn('wall', 'beach');
         m.after(2.5, () => m.alert('wall', 'beach'));
         m.radio('OVERWATCH', 'Cape Solace. Gate is dead ahead, two hundred metres. Snipers on the gate towers, guns on the corners. This is the last one, Kestrel.', 1.2);
-        if (m.squad) m.radio('RUSK', 'Three of them. They sent three. Somebody shoot them.', 9);
-        else m.radio('RUSK', 'One man. They sent one man. Somebody shoot him.', 9);
+        if (m.squad) m.radio('RUSK', 'Three of them. They sent three. Somebody shoot them.', 9, 'pa');
+        else m.radio('RUSK', 'One man. They sent one man. Somebody shoot him.', 9, 'pa');
       },
     },
     {
@@ -243,6 +259,7 @@ export const ch6: ChapterDef = {
       enter: (m) => {
         m.after(0.8, () => m.alert('court'));
         m.radio('OVERWATCH', 'Gate is down. Courtyard is full of his best people. Barracks hut on your left has a crate.', 1.2);
+        m.radio('RUSK', 'Courtyard. Everything you have. I pay you too well for this.', 9, 'pa');
       },
     },
     {
@@ -252,9 +269,20 @@ export const ch6: ChapterDef = {
       done: kill('boss'),
       enter: (m) => {
         m.spawn('boss');
-        m.radio('RUSK', 'You have cost me a great deal of money. Come inside. Let us settle the account.', 0.8);
+        m.radio('RUSK', 'You have cost me a great deal of money. Come inside. Let us settle the account.', 0.8, 'pa');
         m.radio('OVERWATCH', 'He is in the keep, the big hall. He is armoured head to foot. Do not let him close the distance.', 7);
+        // Face to face he talks in his own voice, from wherever he is standing.
+        m.when(() => m.fighting('rusk'), () => m.radio('RUSK', 'No radio. No rifle on a hill. Just you, me, and the bill.', 1.5, '@rusk'));
+        m.when(() => m.health('rusk') < 0.66, () => m.radio('RUSK', 'Is that all? I have been shot by better men, for less money.', 0, '@rusk'));
+        m.when(() => m.health('rusk') < 0.33, () => m.radio('RUSK', 'Listen to me. You cannot spend a medal. Walk away, and I will make you rich.', 0, '@rusk'));
+        m.when(() => m.health('rusk') <= 0, () => lastWords(m));
+        // Between those, whenever there is a lull, he has something to say.
+        let taunt = 0;
+        m.every(15, () => {
+          if (m.fighting('rusk') && m.quiet && taunt < TAUNTS.length) m.speak(TAUNTS[taunt++], 0, '@rusk');
+        });
       },
+      exit: (m) => lastWords(m),
     },
     {
       id: 'uplink',

@@ -13,6 +13,16 @@ export type Cond =
   | { k: 'all'; of: Cond[] }
   | { k: 'any'; of: Cond[] };
 
+/**
+ * One spoken line, written as a plain `line('WHO', 'text')` so that the build, which reads this
+ * source to find every line that needs a voice, can see it. Use it where lines are kept in a list.
+ */
+export interface Spoken {
+  who: string;
+  text: string;
+}
+export const line = (who: string, text: string): Spoken => ({ who, text });
+
 export const reach = (zone: string): Cond => ({ k: 'reach', zone });
 export const kill = (...groups: string[]): Cond => ({ k: 'kill', groups });
 export const use = (id: string): Cond => ({ k: 'use', id });

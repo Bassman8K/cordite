@@ -13,13 +13,13 @@ Pain and death sounds (pain_*.mp3, death_*.mp3)
   Creative Commons Zero (CC0). https://opengameart.org/content/male-gruntyelling-sounds
 
 Story dialogue (say_*.mp3, hq_*.mp3)
-  Spoken by Piper (https://github.com/OHF-Voice/piper1-gpl), a neural voice that runs offline,
-  with voices their speakers released into the public domain:
-    OVERWATCH  en_GB-cori-high
-    KESTREL    en_US-joe-medium
-    WREN       en_US-kristin-medium
-    RUSK       en_US-norman-medium
-  These are computer voices modelled on real people, not performances by actors.
+  Spoken by Kokoro (https://huggingface.co/hexgrad/Kokoro-82M, Apache License 2.0), a neural
+  voice that runs offline, through kokoro-onnx (MIT):
+    OVERWATCH  bf_emma
+    KESTREL    am_michael
+    WREN       af_heart
+    RUSK       a blend of bm_lewis and bm_fable
+  These are computer voices, not performances by actors.
 
 Gunshots, part (shotAk_5.flac, shotAk_6.flac, shotBolt_0.flac, shotBolt_1.flac, shotShotgun_5.flac)
   Recordings of an SKS, a Mosin-Nagant rifle and a shotgun,

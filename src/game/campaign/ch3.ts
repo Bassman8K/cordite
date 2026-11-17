@@ -217,6 +217,7 @@ export const ch3: ChapterDef = {
       enter: (m) => {
         m.spawn('snipers');
         m.radio('OVERWATCH', 'Two sniper teams on the ridges, one west, one east, each in a tower. They own the trail from here up. Take them first.', 0.8);
+        m.radio('RUSK', 'Rusk to the ridge teams. He is on the pass. You have the height and the long guns. I expect to hear one shot.', 11);
       },
     },
     {
@@ -246,6 +247,7 @@ export const ch3: ChapterDef = {
       done: survive(80),
       enter: (m) => {
         m.radio('OVERWATCH', 'Charges are set, but their response force is already on the trail. Keep them off those dishes until the weather shuts the pass.', 0.5);
+        m.radio('RUSK', 'Those dishes are worth more than every man on that mountain. Take my station back.', 18);
         m.after(5, () => {
           m.spawn('qrf1');
           m.alert('qrf1');
@@ -273,6 +275,7 @@ export const ch3: ChapterDef = {
         m.spawn('lzguard');
         m.after(1, () => m.alert('lzguard'));
         m.radio('OVERWATCH', 'Dishes are gone. LANTERN is blind. Pickup is the green beacon through the east gate. Go now, the pass is closing.', 1);
+        m.radio('RUSK', 'Blind. Very well. We do this the old way. Fuel the aircraft at Kharan.', 12);
       },
     },
   ],

@@ -251,7 +251,7 @@ function onsets(x) {
 
 const manifest = {};
 const MP3 = ['-c:a', 'libmp3lame', '-b:a', '64k', '-ar', '44100'];
-const MP3_SPEECH = ['-c:a', 'libmp3lame', '-b:a', '40k', '-ar', '22050'];
+const MP3_SPEECH = ['-c:a', 'libmp3lame', '-b:a', '48k', '-ar', '24000'];
 const MP3_LONG = ['-c:a', 'libmp3lame', '-b:a', '72k', '-ar', '32000'];
 // Short sounds are stored without loss and without the start-up delay MP3 adds: a late shot feels wrong.
 const FLAC = ['-c:a', 'flac', '-sample_fmt', 's16', '-ar', '32000', '-compression_level', '8'];
@@ -497,10 +497,10 @@ Pain and death sounds (pain_*.mp3, death_*.mp3)
   Creative Commons Zero (CC0). https://opengameart.org/content/male-gruntyelling-sounds
 
 Story dialogue (say_*.mp3, hq_*.mp3)
-  Spoken by Piper (https://github.com/OHF-Voice/piper1-gpl), a neural voice that runs offline,
-  with voices their speakers released into the public domain:
-${Object.entries(CAST).map(([who, c]) => `    ${who.padEnd(10)} ${c.model}`).join('\n')}
-  These are computer voices modelled on real people, not performances by actors.
+  Spoken by Kokoro (https://huggingface.co/hexgrad/Kokoro-82M, Apache License 2.0), a neural
+  voice that runs offline, through kokoro-onnx (MIT):
+${Object.entries(CAST).map(([who, c]) => `    ${who.padEnd(10)} ${typeof c.voice === 'string' ? c.voice : `a blend of ${Object.keys(c.voice).join(' and ')}`}`).join('\n')}
+  These are computer voices, not performances by actors.
 
 Gunshots, part (shotAk_5.flac, shotAk_6.flac, shotBolt_0.flac, shotBolt_1.flac, shotShotgun_5.flac)
   Recordings of an SKS, a Mosin-Nagant rifle and a shotgun,
