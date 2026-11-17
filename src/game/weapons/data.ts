@@ -620,6 +620,27 @@ function blank(id: string, name: string, cls: WeaponClass, cc: string, year: num
   };
 }
 
+/** Which recorded gunfire a cartridge is heard as (the weapon's class can still override it, see derive). */
+const SOUND_OF: Record<string, SoundClass> = {
+  '.22lr': 'shot22',
+  '.32acp': 'shotPistol', '.380': 'shotPistol', '9x18': 'shotPistol', '9x19': 'shotPistol', '7.62x25': 'shotPistol', '7.63x25': 'shotPistol',
+  '7.62x38r': 'shotPistol', '8x22': 'shotPistol', '.38spl': 'shotPistol',
+  '.45acp': 'shot45', '.45colt': 'shot45', '.455': 'shot45', '.44-40': 'shot45',
+  '.357': 'shotMagnum', '.44mag': 'shotMagnum', '.454': 'shotMagnum', '.500sw': 'shotMagnum', '.50ae': 'shotMagnum',
+  '5.7x28': 'shotPdw', '4.6x30': 'shotPdw', '5.8x21': 'shotPdw',
+  '5.56x45': 'shotAr', '5.8x42': 'shotAr', '4.73x33': 'shotAr', '.30carbine': 'shotAr', '.300blk': 'shotAr',
+  '7.62x39': 'shotAk', '5.45x39': 'shotAk', '7.92x33': 'shotAk', '9x39': 'shotAk',
+  '7.62x51': 'shotBattle', '6.8x51': 'shotBattle', '7.5x54': 'shotBattle', '7.5x55': 'shotBattle',
+  '.30-06': 'shotGarand',
+  '7.62x54r': 'shotBolt', '.303': 'shotBolt', '7.92x57': 'shotBolt', '7.7x58': 'shotBolt', '6.5x50': 'shotBolt', '6.5x52': 'shotBolt',
+  '8x50r': 'shotBolt', '.30-30': 'shotBolt', '.45-70': 'shotBolt', '.577/450': 'shotBolt',
+  '.300wm': 'shotSniper', '.338lm': 'shotSniper', '.338nm': 'shotSniper', '.408': 'shotSniper',
+  '.50bmg': 'shotAmr', '12.7x108': 'shotAmr', '.55boys': 'shotAmr', '14.5x114': 'shotAmr', '20x82': 'shotAmr',
+  // Black powder has no recording here; a shotgun's low boom is the nearest thing to it.
+  '.75ball': 'shotShotgun', '.58minie': 'shotShotgun', '.50ball': 'shotShotgun', blunder: 'shotShotgun',
+  '12ga': 'shotShotgun', '23mm': 'shotShotgun',
+};
+
 function derive(r: Row): WeaponDef {
   const [id, name, cls, cc, year, calId, kg, lenMM, bblMM, rpmIn, mv, mag, modeStr, look, x = {}] = r;
   const cal = CALIBERS[calId];
@@ -817,23 +838,22 @@ function derive(r: Row): WeaponDef {
   else w.reserve = w.proj === 'flame' ? mag * 2 : w.proj === 'arrow' ? 24 : 8;
   if (style === 'minigun') w.reserve = 600;
 
-  // Sound
+  // Sound: by what the weapon fires, because the cartridge is most of what a shot sounds like.
+  const family = SOUND_OF[calId];
   let sound: SoundClass;
   if (w.proj === 'rocket') sound = 'shotLauncher';
   else if (w.proj === 'grenade' || w.proj === 'flare') sound = 'shotThump';
   else if (w.proj === 'arrow') sound = 'shotBow';
   else if (w.proj === 'taser') sound = 'shotTaser';
   else if (w.proj === 'flame') sound = 'flame';
-  else if (w.suppressed) sound = 'shotSup';
-  else if (cls === 'shotgun') sound = 'shotShotgun';
+  else if (w.suppressed) sound = E > 2500 ? 'shotSupHeavy' : 'shotSup';
+  else if (cls === 'shotgun' || family === 'shotShotgun') sound = 'shotShotgun';
   else if (style === 'minigun') sound = 'shotMini';
-  else if (E < 750) sound = cls === 'smg' ? 'shotSmg' : 'shotPistol';
-  else if (cls === 'handgun') sound = 'shotMagnum';
-  else if (E < 1250) sound = 'shotSmg';
-  else if (E < 2400) sound = cls === 'mg' ? 'shotLmg' : 'shotRifle';
-  else if (E < 5200) sound = cls === 'mg' ? 'shotLmg' : 'shotBattle';
-  else if (E < 11000) sound = 'shotSniper';
-  else sound = 'shotAmr';
+  else if (cls === 'mg') sound = family === 'shotAmr' ? 'shotHmg' : family === 'shotAr' || family === 'shotAk' ? 'shotLmgLight' : 'shotLmg';
+  else if (cls === 'smg' && family === 'shotPistol') sound = 'shotSmg';
+  // A modern precision rifle in a service cartridge is still a sniper rifle to the ear: long barrel, brake.
+  else if (cls === 'sniper' && (family === 'shotBattle' || family === 'shotGarand') && year >= 1960) sound = 'shotSniper';
+  else sound = family ?? (E < 750 ? 'shotPistol' : E < 2400 ? 'shotAr' : E < 5200 ? 'shotBattle' : E < 11000 ? 'shotSniper' : 'shotAmr');
   w.sound = sound;
   w.tracer = cls === 'mg' ? 3 : 1;
   if (x.boost) (w as WeaponDef & { boost?: number }).boost = x.boost;

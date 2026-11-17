@@ -189,7 +189,8 @@ export function buildLevelMeshes(b: LevelBuilder, lib: MaterialLib, look: WaterL
     const pos = new Float32Array(n1 * n1 * 3);
     const col = new Float32Array(n1 * n1 * 3);
     const uv = new Float32Array(n1 * n1 * 2);
-    const uvs = 0.16;
+    // One repeat of the ground every 2.5 m: the size the photographed ground materials were shot at.
+    const uvs = 0.4;
     for (let iz = 0; iz < n1; iz++) {
       for (let ix = 0; ix < n1; ix++) {
         const i = iz * n1 + ix;

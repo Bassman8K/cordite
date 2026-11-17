@@ -292,7 +292,7 @@ export class Game {
         near = e;
       }
     }
-    if (near) audio.say(['vo_target_destroyed'], { x: near.pos.x, y: near.pos.y + 1.6, z: near.pos.z, ref: 18, vol: 1, rate: near.voice, delay: 0.9 });
+    if (near) audio.say([`${near.actor}_target_destroyed`], { x: near.pos.x, y: near.pos.y + 1.6, z: near.pos.z, ref: 30, vol: 1.1, rate: near.voice, delay: 0.9 });
     audio.setIntensity(0);
     this.setState('dead');
   }
@@ -302,7 +302,7 @@ export class Game {
     this.failReason = reason;
     this.stats.deaths++;
     audio.play('fail', { vol: 0.6 });
-    audio.say(['hq_mission_failed'], { radio: true, bus: 'ui', vol: 0.95, delay: 0.7 });
+    audio.say(['hq_failed'], { radio: true, bus: 'ui', vol: 1, delay: 0.7 });
     this.setState('failed');
   }
 
@@ -334,7 +334,7 @@ export class Game {
     audio.setIntensity(0);
     audio.play('objective', { vol: 0.9 });
     audio.play('radio', { vol: 0.6, delay: 0.5, bus: 'ui' });
-    audio.say(['hq_mission_completed'], { radio: true, bus: 'ui', vol: 0.95, delay: 0.65 });
+    audio.say(['hq_complete'], { radio: true, bus: 'ui', vol: 1, delay: 0.68 });
     this.after(1.6, () => this.setState('complete'));
   }
 

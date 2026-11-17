@@ -1,5 +1,6 @@
-// Procedural textures. Everything is generated at load from tileable noise, so the game ships
-// without a single image file and textures can be dropped again when a chapter unloads.
+// Surface textures. The big surfaces of the world (concrete, brick, rock, ground) are photographs of
+// the real material, loaded from tex/ when a chapter needs them. Everything else, and every surface
+// until its photograph has arrived, is generated here from tileable noise.
 
 import * as THREE from 'three';
 import { clamp01, smoothstep, tileFbm, tileNoise } from '../core/math';
@@ -312,6 +313,9 @@ export function disposeTextures(): void {
     t.normalMap?.dispose();
   }
   cache.clear();
+  for (const t of photoTextures) t.dispose();
+  photoTextures.length = 0;
+  photos.clear();
 }
 
 function finish(tex: THREE.DataTexture, srgb: boolean): THREE.DataTexture {
@@ -323,6 +327,67 @@ function finish(tex: THREE.DataTexture, srgb: boolean): THREE.DataTexture {
   tex.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   tex.needsUpdate = true;
   return tex;
+}
+
+/** The mean colour of a generated texture, in linear light. scripts/make-textures.mjs tones photographs to it. */
+export function averageColor(name: string): [number, number, number] | null {
+  const def = DEFS[name];
+  if (!def) return null;
+  const o = new Float32Array(5);
+  const sum = [0, 0, 0];
+  const n = 48;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      def.gen((x + 0.5) / n, (y + 0.5) / n, o);
+      for (let k = 0; k < 3; k++) sum[k] += clamp01(o[k]) ** 2.2;
+    }
+  }
+  return [sum[0] / (n * n), sum[1] / (n * n), sum[2] / (n * n)];
+}
+
+/**
+ * Surfaces that have a photographed material in tex/, and how many times the photograph repeats per
+ * repeat of the generated texture it replaces (brick courses are smaller than a 2 m tile, and so on).
+ */
+export const PHOTO: Record<string, number> = {
+  concrete: 0.85, asphalt: 1, brick: 1.7, plaster: 1, rock: 1, dirt: 1, sand: 1, snow: 1, grass: 1.4, planks: 1.3, rust: 1, corrugated: 1,
+};
+
+export interface PhotoSet {
+  map: THREE.Texture;
+  normalMap: THREE.Texture;
+  /** Ambient occlusion in red, roughness in green. */
+  ormMap: THREE.Texture;
+}
+const photos = new Map<string, Promise<PhotoSet | null>>();
+const photoTextures: THREE.Texture[] = [];
+
+/**
+ * The photographed version of a surface: colour, surface relief, and how rough and how shadowed each
+ * part of it is. Resolves to null when there is none (or it cannot be fetched), and the generated
+ * texture stays.
+ */
+export function loadPhoto(name: string, base = './tex/'): Promise<PhotoSet | null> {
+  const repeat = PHOTO[name];
+  if (!repeat || typeof document === 'undefined') return Promise.resolve(null);
+  let job = photos.get(name);
+  if (!job) {
+    const loader = new THREE.TextureLoader();
+    const one = (suffix: string, srgb: boolean) =>
+      loader.loadAsync(`${base}${name}_${suffix}.jpg`).then((t) => {
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.repeat.setScalar(repeat);
+        t.anisotropy = anisotropy;
+        t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+        photoTextures.push(t);
+        return t;
+      });
+    job = Promise.all([one('c', true), one('n', false), one('o', false)])
+      .then(([map, normalMap, ormMap]) => ({ map, normalMap, ormMap }))
+      .catch(() => null);
+    photos.set(name, job);
+  }
+  return job;
 }
 
 export function hasTexture(name: string): boolean {

@@ -182,7 +182,7 @@ export class Hud {
       if (!store.settings.subtitles) return;
       this.sub.innerHTML = `<b>${esc(l.who)}</b>${esc(l.text)}`;
       this.sub.classList.add('on');
-      this.subT = 2.4 + l.text.length * 0.05;
+      this.subT = Math.max(l.seconds ?? 0, 2.4 + l.text.length * (l.seconds ? 0.03 : 0.05));
     });
     ev.on('toast', (t) => {
       const d = el('div', `h-toast ${t.kind}`);

@@ -1,6 +1,6 @@
 # CORDITE
 
-**A lightweight single-player tactical shooter.** Six chapters, 460 real-world weapons, human enemies with real voices, and a game that weighs under 3 MB.
+**A lightweight single-player tactical shooter.** Six chapters with a spoken story, 460 real-world weapons that sound like the real thing, soldiers with human voices, and a game that weighs about 10 MB.
 
 [**Website and downloads**](https://bassman8k.github.io/cordite/) · [**Play in the browser**](https://bassman8k.github.io/cordite/play/) · [**Latest release**](https://github.com/Bassman8K/cordite/releases/latest) · [**Report a bug**](https://github.com/Bassman8K/cordite/issues/new/choose)
 
@@ -13,8 +13,10 @@ A private army has stolen LANTERN, a package that turns any guided weapon agains
 - **A campaign in six chapters.** A night harbour in the rain, a ruined boulevard, a mountain pass in a blizzard, a desert airfield, an underground lab and a coastal fortress. Each chapter is split into objectives with a checkpoint at every one, and you can start from any chapter you have reached.
 - **460 weapons and counting.** Pistols, submachine guns, assault and battle rifles, sniper and anti-materiel rifles, historic rifles, shotguns, machine guns, launchers, blades and throwables. Each is entered by its real specifications (calibre, muzzle velocity, weight, barrel length, rate of fire, feed), and the game derives recoil, handling, drop and damage from those numbers.
 - **Simulated ballistics.** Every round is a projectile with travel time, drag, gravity and penetration.
-- **Enemies that fight back.** They patrol, investigate noise, take cover, flank, suppress and call for help, out loud: recorded voice actors shout "Target engaged", "Reloading", "Fire in the hole" and "Medic" as the fight develops.
-- **Almost nothing stored.** Terrain, buildings, textures, weapon models and soldiers are generated in code when a chapter loads. The only recordings are human voices and real gunfire, about 1.2 MB.
+- **Enemies that fight back.** They patrol, investigate noise, take cover, flank, suppress and call for help, out loud: two recorded voice actors shout "Target engaged", "Reloading", "Fire in the hole" and "Medic", and a squad keeps talking for as long as the fight lasts.
+- **Weapons that sound like themselves.** Gunfire is cut from recordings of the real weapons, one set per cartridge: a Glock, a 1911, an M4, an AK-47, a SCAR-H, an M1 Garand, a Mosin-Nagant, a .50 BMG, a Browning M2 and more. Reloads, footsteps, bullet impacts, fly-bys and grenades are recordings too. Nothing is synthesised gunfire.
+- **A spoken story.** Every line your controller, your contact and the man you are hunting say is spoken aloud over the radio, with subtitles.
+- **Photographed surfaces.** Concrete, brick, plaster, rock, sand, snow and steel are photographs of the real material. The worlds built from them, the soldiers and all 460 weapon models are still generated in code when a chapter loads, which is why the whole game is about 10 MB.
 - **Everywhere.** Windows, macOS, Linux, Android, iPhone and iPad from one codebase, plus any modern browser. Keyboard and mouse, gamepad or touch.
 
 ## Download
@@ -65,7 +67,7 @@ The view follows the mouse once the browser has captured it: click the game once
 
 | | |
 | --- | --- |
-| Game data (the whole web build) | about 2.7 MB |
+| Game data (the whole web build) | about 9.7 MB, of which 6 MB is recorded sound and 2.3 MB photographed materials |
 | Game heap while playing | 30 to 70 MB, Low to High quality |
 | Draw calls per frame | 80 to 250 |
 | Desktop app while playing | about 0.5 GB on Low, 0.7 GB on High |
@@ -114,8 +116,8 @@ Bump `version` in `package.json` first; every platform takes its version number 
 ### Layout
 
 ```
-src/core        engine, input, audio synthesis, settings and saves
-src/gfx         procedural textures, materials, sky, effects, weapon icons
+src/core        engine, input, audio, settings and saves
+src/gfx         textures, materials, sky, effects, weapon icons
 src/world       collision, navigation, terrain, level builder and props
 src/game        player, weapons (data, models, handling), ballistics, enemies, missions
 src/game/campaign   the six chapters
@@ -129,12 +131,13 @@ tests           weapon data and campaign validation
 
 ## Licence, credits and disclaimer
 
-The code is [MIT](LICENSE). The recorded audio in `public/audio` comes from freely licensed sources, listed in full in [`public/audio/CREDITS.txt`](public/audio/CREDITS.txt):
+The code is [MIT](LICENSE). The recorded audio in `public/audio` and the photographed materials in `public/tex` come from freely licensed sources, every one listed in [`public/audio/CREDITS.txt`](public/audio/CREDITS.txt) and [`public/tex/CREDITS.txt`](public/tex/CREDITS.txt):
 
-- Voice lines: Kenney Voiceover Pack (kenney.nl), male voice Jeffrey M. Smith. CC0.
-- Pain and death sounds: "Male Grunt/Yelling sounds" by megaboots. CC0.
-- Gunshots: recordings © 2009 Vincent Sevedge, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), cut, re-pitched and layered with generated sound.
+- Gunfire, reloads, footsteps, impacts, explosions and weather: field recordings shared on [Freesound](https://freesound.org) and OpenGameArt, nearly all in the public domain (CC0). Many are by areniporgen, who records individual weapons, and by qubodup, who cuts them from public-domain US military footage. Three are [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (areniporgen: Smith & Wesson M&P 9, SIG Sauer SIG716, Motorola PTT), and the SKS, Mosin-Nagant and one shotgun are © 2009 Vincent Sevedge, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Changes: single events cut out, rumble removed, levels matched.
+- Soldiers' voices: Kenney Voiceover Pack (kenney.nl), male voice Jeffrey M. Smith. CC0. Pain and death sounds: "Male Grunt/Yelling sounds" by megaboots. CC0.
+- Story dialogue: spoken by [Piper](https://github.com/OHF-Voice/piper1-gpl), a neural voice that runs offline, using four voices their speakers released into the public domain. These are computer voices modelled on real people, not performances by actors; the script is in `src/game/campaign` if you would like to record it yourself.
+- Surfaces: [ambientCG](https://ambientcg.com) by Lennart Demes and contributors. CC0.
 
-`scripts/make-audio.mjs` rebuilds those files from the original packs.
+`scripts/make-audio.mjs`, `scripts/make-speech.mjs` and `scripts/make-textures.mjs` rebuild all of it from the originals.
 
 CORDITE is a work of fiction. Its story, places, organisations and characters are invented. Weapon names are used only to identify the real designs they describe; this project is not affiliated with, sponsored by or endorsed by any manufacturer, and uses no manufacturer artwork.

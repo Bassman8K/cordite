@@ -3,6 +3,7 @@
 // open doors and so on.
 
 import * as THREE from 'three';
+import { lineKey } from '../core/audio';
 import { formatTime } from '../core/math';
 import type { ChapterDef, Cond, StageDef } from './campaign/types';
 import type { Game } from './game';
@@ -19,6 +20,9 @@ interface Line {
   who: string;
   text: string;
   at: number;
+  /** The recording of this line, and how long it has been kept waiting for that recording to load. */
+  key: string;
+  held: number;
 }
 
 export class Mission {
@@ -34,6 +38,7 @@ export class Mission {
   private spawned = new Set<string>();
   private lines: Line[] = [];
   private lineBusy = 0;
+  private lastLine = '';
   private clock = 0;
   private countdown: { label: string; t: number; fn: () => void; hurried?: boolean } | null = null;
   private lastNote = '';
@@ -88,7 +93,10 @@ export class Mission {
 
   radio(who: string, text: string, delay = 0): void {
     if (this.silent) return;
-    this.lines.push({ who, text, at: this.clock + delay });
+    const key = lineKey(who, text);
+    // Dialogue is fetched when it is about to be needed, not held in memory for the whole game.
+    this.game.audio.prepare(key);
+    this.lines.push({ who, text, at: this.clock + delay, key, held: 0 });
     this.lines.sort((a, b) => a.at - b.at);
   }
 
@@ -271,13 +279,25 @@ export class Mission {
     this.clock += dt;
     this.stageTime += dt;
 
-    // Radio: one line at a time, spaced by reading length.
+    // Dialogue: one line at a time, each spoken aloud, the next waiting until it has been said.
     this.lineBusy -= dt;
-    if (this.lines.length && this.lines[0].at <= this.clock && this.lineBusy <= 0) {
-      const l = this.lines.shift() as Line;
-      this.lineBusy = 1.6 + l.text.length * 0.048;
-      g.events.emit('radio', { who: l.who, text: l.text });
-      g.audio.play('radio', { vol: 0.8 });
+    const due = this.lines[0];
+    if (due && due.at <= this.clock && this.lineBusy <= 0) {
+      // A recording still on its way gets a moment to arrive rather than the line going unspoken.
+      if (g.audio.loading(due.key) && due.held < 1.5) due.held += dt;
+      else {
+        this.lines.shift();
+        // Kestrel is the player: his own voice is heard directly, everyone else over the radio.
+        const own = due.who === 'KESTREL';
+        if (!own) g.audio.play('radio', { vol: 0.7, bus: 'ui' });
+        const said = g.audio.speak(due.key, { radio: !own, vol: own ? 0.85 : 1, delay: own ? 0 : 0.18 });
+        if (said && !own) g.audio.play('radioEnd', { vol: 0.5, bus: 'ui', delay: 0.18 + said + 0.06 });
+        const read = 1.6 + due.text.length * 0.048;
+        this.lineBusy = said ? said + 0.8 : read;
+        g.events.emit('radio', { who: due.who, text: due.text, seconds: said ? said + 1 : 0 });
+        if (this.lastLine) g.audio.release(this.lastLine);
+        this.lastLine = due.key;
+      }
     }
 
     for (let i = this.timers.length - 1; i >= 0; i--) {
@@ -303,7 +323,7 @@ export class Mission {
       if (this.countdown.t < 20 && !this.countdown.hurried) {
         this.countdown.hurried = true;
         g.audio.play('radio', { vol: 0.5, bus: 'ui' });
-        g.audio.say(['hq_hurry_up'], { radio: true, bus: 'ui', vol: 0.9, delay: 0.15 });
+        g.audio.say(['hq_hurry'], { radio: true, bus: 'ui', vol: 1, delay: 0.18 });
       }
       if (this.countdown.t <= 0) {
         const fn = this.countdown.fn;
@@ -336,7 +356,7 @@ export class Mission {
       }
       g.audio.play('objective', { vol: 0.7 });
       g.audio.play('radio', { vol: 0.5, delay: 0.3, bus: 'ui' });
-      g.audio.say(['hq_objective_achieved'], { radio: true, bus: 'ui', vol: 0.85, delay: 0.45 });
+      g.audio.say(['hq_objective'], { radio: true, bus: 'ui', vol: 0.95, delay: 0.48 });
       this.enter(next);
       g.saveCheckpoint(next);
     }

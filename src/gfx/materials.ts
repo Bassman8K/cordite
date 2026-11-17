@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { getTexture, hasTexture } from './textures';
+import { getTexture, hasTexture, loadPhoto } from './textures';
 
 interface MatDef {
   tex?: string;
@@ -68,14 +68,36 @@ export class MaterialLib {
         });
         if (tex?.normalMap) sm.normalScale.setScalar(d.nScale ?? 1);
         m = sm;
+        // The photographed material takes over as soon as it has loaded.
+        if (d.tex) {
+          void loadPhoto(d.tex).then((photo) => {
+            if (!photo || this.cache.get(name) !== sm) return;
+            sm.map = photo.map;
+            sm.normalMap = photo.normalMap;
+            sm.normalScale.setScalar(d.nScale ?? 1);
+            sm.roughnessMap = photo.ormMap;
+            sm.aoMap = photo.ormMap;
+            // Roughness now comes from the photograph; the number keeps only how much it deviates.
+            sm.roughness = Math.min(1, d.rough + 0.12);
+            sm.needsUpdate = true;
+          });
+        }
       } else {
-        m = new THREE.MeshLambertMaterial({
+        const lm = new THREE.MeshLambertMaterial({
           color: d.color ?? 0xffffff,
           vertexColors: true,
           map: tex?.map ?? null,
           side: d.double ? THREE.DoubleSide : THREE.FrontSide,
           alphaTest: d.alphaTest ?? 0,
         });
+        m = lm;
+        if (d.tex) {
+          void loadPhoto(d.tex).then((photo) => {
+            if (!photo || this.cache.get(name) !== lm) return;
+            lm.map = photo.map;
+            lm.needsUpdate = true;
+          });
+        }
       }
     }
     m.name = name;

@@ -6,7 +6,8 @@ export interface GameEvents {
   ammo: void;
   weapon: void;
   objective: { text: string; note: string; done?: boolean };
-  radio: { who: string; text: string };
+  /** A line of dialogue. `seconds` is how long it takes to say, when it is spoken aloud. */
+  radio: { who: string; text: string; seconds?: number };
   toast: { text: string; kind: 'info' | 'checkpoint' | 'pickup' | 'warn' };
   prompt: { text: string; progress: number } | null;
   state: string;

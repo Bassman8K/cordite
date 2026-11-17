@@ -12,6 +12,9 @@ export interface EnemyHit {
 /** Owns every soldier in the level and answers spatial queries about them. */
 /** What a soldier says on first seeing the player. */
 const SPOTTED = ['target_engaged', 'look_out', 'call_for_backup', 'go_go_go'];
+/** Things said in the middle of a fight, with others to hear them, and with nobody left. */
+const BANTER = ['suppressing_fire', 'cover_me', 'go_go_go', 'watch_my_back', 'target_engaged', 'hold', 'look_out'];
+const ALONE = ['call_for_backup', 'target_engaged', 'medic', 'cover_me'];
 
 export class EnemyManager {
   readonly group = new THREE.Group();
@@ -19,6 +22,9 @@ export class EnemyManager {
   private corpses: Enemy[] = [];
   private pathBudget = 0;
   private shoutCool = 0;
+  private chatterT = 4;
+  private lastSpoke = -1;
+  private lastLine = '';
   private part = { part: 'torso' as BodyPart };
   private result: EnemyHit = { enemy: null as unknown as Enemy, t: 0, part: 'torso' };
   private sep = { x: 0, z: 0 };
@@ -52,6 +58,7 @@ export class EnemyManager {
   update(dt: number): void {
     this.pathBudget = 3;
     this.shoutCool -= dt;
+    this.chatter(dt);
     for (let i = this.list.length - 1; i >= 0; i--) {
       const e = this.list[i];
       e.update(dt);
@@ -155,11 +162,41 @@ export class EnemyManager {
    */
   shout(e: Enemy, urgent = false, lines: string[] = SPOTTED): void {
     if (this.shoutCool > 0 && !urgent) return;
-    this.shoutCool = urgent ? 1.6 : 3.4;
+    this.shoutCool = urgent ? 1.1 : 2.4;
+    this.chatterT = Math.max(this.chatterT, 2.6);
+    this.lastSpoke = e.id;
     const audio = this.game.audio;
     // Kit shifting as he reacts.
     audio.play('rattle', { x: e.pos.x, y: e.pos.y + 1.1, z: e.pos.z, ref: 6, vol: 0.7 });
-    audio.say(lines.map((l) => `vo_${l}`), { x: e.pos.x, y: e.pos.y + 1.6, z: e.pos.z, ref: 16, vol: 1, rate: e.voice, delay: 0.08 }, `shout${1 + Math.floor(Math.random() * 3)}`);
+    // Never the same words twice running.
+    const fresh = lines.filter((l) => l !== this.lastLine);
+    const line = (fresh.length ? fresh : lines)[Math.floor(Math.random() * (fresh.length || lines.length))];
+    this.lastLine = line;
+    // A shout carries: full strength out to 30 m, so orders are heard over the shooting.
+    audio.say([`${e.actor}_${line}`], { x: e.pos.x, y: e.pos.y + 1.6, z: e.pos.z, ref: 30, vol: 1.2, rate: e.voice, delay: 0.08, reverb: 0.18 }, `shout${1 + Math.floor(Math.random() * 3)}`);
+  }
+
+  /**
+   * Squads talk while they fight. Every few seconds one soldier who is in the fight and near enough to
+   * be heard says something that fits what he is doing; never the man who spoke last.
+   */
+  private chatter(dt: number): void {
+    this.chatterT -= dt;
+    if (this.chatterT > 0 || this.fighting === 0) return;
+    this.chatterT = 3.2 + Math.random() * 3.4;
+    const p = this.game.player.pos;
+    let pick: Enemy | null = null;
+    let best = 75 * 75;
+    for (const e of this.list) {
+      if (!e.alive || e.state !== 'combat' || e.id === this.lastSpoke) continue;
+      const d = (e.pos.x - p.x) ** 2 + (e.pos.z - p.z) ** 2;
+      // Nearest first, with enough chance in it that the same two men do not hold the whole conversation.
+      if (d * (0.5 + Math.random()) < best) {
+        best = d * (0.5 + Math.random());
+        pick = e;
+      }
+    }
+    if (pick) this.shout(pick, false, this.fighting > 1 ? BANTER : ALONE);
   }
 
   takePathBudget(): boolean {

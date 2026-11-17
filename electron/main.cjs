@@ -20,6 +20,11 @@ if (SMOKE_DIR) {
   // Build servers have no GPU. `--software-gl` lets the smoke test run WebGL on the CPU rasteriser;
   // it is never set for players.
   app.commandLine.appendSwitch('ignore-gpu-blocklist');
+  // The test window may open behind whatever the person at the machine is doing. A covered window
+  // normally stops drawing, and a game that stops drawing never finishes loading.
+  app.commandLine.appendSwitch('disable-renderer-backgrounding');
+  app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+  app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion,MacWebContentsOcclusion');
   if (process.argv.includes('--software-gl')) {
     app.commandLine.appendSwitch('enable-unsafe-swiftshader');
     app.commandLine.appendSwitch('use-angle', 'swiftshader');
@@ -47,7 +52,7 @@ function createWindow() {
       sandbox: true,
       spellcheck: false,
       devTools: !app.isPackaged,
-      backgroundThrottling: true,
+      backgroundThrottling: !SMOKE_DIR,
     },
   });
   win.once('ready-to-show', () => win.show());

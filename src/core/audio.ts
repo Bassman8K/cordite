@@ -252,7 +252,7 @@ const GEN: Record<string, GenFn> = {
   shotPistol: (sr) => shot(sr, { dur: 0.42, crack: 0.9, bright: 3000, body: 0.045, thump: 0.6, thumpF: 135, tail: 0.18, drive: 1.5 }),
   shotMagnum: (sr) => shot(sr, { dur: 0.7, crack: 1.1, bright: 3200, body: 0.07, thump: 1.1, thumpF: 105, tail: 0.3, drive: 1.9 }),
   shotSmg: (sr) => shot(sr, { dur: 0.3, crack: 0.8, bright: 3600, body: 0.035, thump: 0.45, thumpF: 150, tail: 0.12, drive: 1.36 }),
-  shotRifle: (sr) => shot(sr, { dur: 0.6, crack: 1.3, bright: 4200, body: 0.06, thump: 0.85, thumpF: 110, tail: 0.28, drive: 1.77 }),
+  shotAr: (sr) => shot(sr, { dur: 0.6, crack: 1.3, bright: 4200, body: 0.06, thump: 0.85, thumpF: 110, tail: 0.28, drive: 1.77 }),
   shotBattle: (sr) => shot(sr, { dur: 0.8, crack: 1.3, bright: 3600, body: 0.075, thump: 1.1, thumpF: 92, tail: 0.36, drive: 1.97 }),
   shotSniper: (sr) => shot(sr, { dur: 1.3, crack: 1.5, bright: 3800, body: 0.09, thump: 1.3, thumpF: 78, tail: 0.5, drive: 2.04 }),
   shotAmr: (sr) => shot(sr, { dur: 1.7, crack: 1.6, bright: 3000, body: 0.13, thump: 1.8, thumpF: 60, tail: 0.65, drive: 2.31 }),
@@ -638,6 +638,64 @@ const GEN: Record<string, GenFn> = {
 /** Sounds that get several randomly chosen takes. */
 const TAKES = /^(shot(?!Taser)|step|hit|shout|grunt|hurt$|casing|rattle)/;
 
+// Sounds that exist as recordings and have no generator of their own. Until the recording has loaded
+// (or in a build that carries none) the nearest generated sound stands in.
+const STAND_IN: Record<string, string> = {
+  shot22: 'shotSmg', shot45: 'shotPistol', shotPdw: 'shotSmg', shotAk: 'shotAr', shotGarand: 'shotBattle', shotBolt: 'shotBattle',
+  shotHmg: 'shotAmr', shotLmgLight: 'shotLmg', shotSupHeavy: 'shotSup', boltAction: 'bolt', boltHeavy: 'bolt', ping: 'casing', radioEnd: 'radio',
+};
+for (const [name, like] of Object.entries(STAND_IN)) GEN[name] = GEN[like];
+
+/** The name of the recording of one spoken line. scripts/lib/script-lines.mjs hashes the same way. */
+export function lineKey(who: string, text: string): string {
+  let h = 0x811c9dc5;
+  const s = `${who}|${text}`;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return `say_${(h >>> 0).toString(16).padStart(8, '0')}`;
+}
+
+/** `shotAr~3` is take 3 of the sound `shotAr`. */
+const soundOf = (name: string): string => {
+  const cut = name.lastIndexOf('~');
+  return cut > 0 ? name.slice(0, cut) : name;
+};
+/**
+ * Recordings too long or too many to keep in memory all the time: the story's dialogue, weather loops
+ * and the gunfire of weapons nobody is holding. They are fetched when first wanted.
+ */
+const onDemand = (sound: string): boolean => /^(say_|amb|shot|rotor)/.test(sound);
+/** How much near-silence a decoded file starts with (compressed formats pad the front). */
+function leadIn(b: AudioBuffer): number {
+  const d = b.getChannelData(0);
+  const max = Math.min(d.length, Math.floor(b.sampleRate * 0.08));
+  let i = 0;
+  while (i < max && Math.abs(d[i]) < 0.004) i++;
+  return i >= max ? 0 : Math.max(0, i / b.sampleRate - 0.002);
+}
+/** A loop with its end blended into its beginning, so it repeats without a click or a gap. */
+function seamless(c: AudioContext, b: AudioBuffer): AudioBuffer {
+  const sr = b.sampleRate;
+  const d = b.getChannelData(0);
+  let a = 0;
+  let z = d.length - 1;
+  while (a < z && Math.abs(d[a]) < 1e-3) a++;
+  while (z > a && Math.abs(d[z]) < 1e-3) z--;
+  const n = Math.min(Math.floor(sr * 0.25), Math.floor((z - a) / 4));
+  const len = z - a - n;
+  if (len < sr) return b;
+  const out = c.createBuffer(1, len, sr);
+  const o = out.getChannelData(0);
+  o.set(d.subarray(a, a + len));
+  for (let i = 0; i < n; i++) {
+    const u = (i / n) * (Math.PI / 2);
+    o[i] = d[a + i] * Math.sin(u) + d[a + len + i] * Math.cos(u);
+  }
+  return out;
+}
+
 /** Renders one sound outside the audio engine (tests and tools). */
 export function renderSound(name: string, sampleRate = 48000): Float32Array | null {
   const gen = GEN[name];
@@ -688,10 +746,17 @@ class AudioSys {
   private verb!: ConvolverNode;
   private verbGain!: GainNode;
   private buffers = new Map<string, AudioBuffer>();
-  /** Recorded sounds (voices, gunshots) loaded from audio/. A name with takes is stored as name~0, name~1... */
+  /** Recorded sounds in memory, from audio/. A sound with several takes is stored as name~0, name~1... */
   private samples = new Map<string, AudioBuffer>();
   private sampleTakes = new Map<string, number>();
   private samplesAsked = false;
+  /** Every recording this build carries, by sound: the takes and where each is fetched from. */
+  private onFile = new Map<string, [name: string, url: string][]>();
+  private listed = false;
+  /** Sounds being fetched right now, and sounds asked for before the list of recordings arrived. */
+  private pending = new Map<string, Promise<void>>();
+  private wanted = new Set<string>();
+  private leads = new WeakMap<AudioBuffer, number>();
   private loops: Loop[] = [];
   private voices = 0;
   private lx = 0;
@@ -793,6 +858,8 @@ class AudioSys {
     }
     const single = this.samples.get(name);
     if (single) return single;
+    // Recorded but not in memory yet: fetch it for next time and make do with the generated sound now.
+    if (!recorded) this.prepare(name);
     const gen = GEN[name];
     if (!gen) return null;
     // Sounds heard again and again get several takes, picked at random, so bursts are not copies.
@@ -810,7 +877,28 @@ class AudioSys {
 
   /** Pre-renders sounds during loading so the first gunshot never hitches. */
   warm(names: string[]): void {
-    for (const n of names) this.buffer(n);
+    for (const n of names) {
+      this.prepare(n);
+      if (!this.onFile.has(n)) this.buffer(n);
+    }
+  }
+
+  /** Starts fetching the recording of a sound that is only loaded on demand. Cheap to call repeatedly. */
+  prepare(name: string): void {
+    if (this.samples.has(name) || this.sampleTakes.has(name)) return;
+    if (this.listed) void this.loadSound(name);
+    else if (onDemand(name)) this.wanted.add(name);
+  }
+
+  /** True while a recording asked for with prepare() is still on its way. */
+  loading(name: string): boolean {
+    return this.pending.has(name) || (this.samplesAsked && !this.listed && this.wanted.has(name));
+  }
+
+  /** Lets go of an on-demand recording that will not be needed again soon. */
+  release(name: string): void {
+    for (const [take] of this.onFile.get(name) ?? []) this.samples.delete(take);
+    this.sampleTakes.delete(name);
   }
 
   /** True once a recording of this sound (or of any take of it) has loaded. */
@@ -826,23 +914,71 @@ class AudioSys {
     const c = this.ctx;
     if (!c || this.samplesAsked || typeof fetch !== 'function') return;
     this.samplesAsked = true;
+    const first = new Set<string>();
     try {
       const manifest = (await (await fetch(`${base}manifest.json`)).json()) as Record<string, string>;
-      await Promise.all(
-        Object.entries(manifest).map(async ([name, file]) => {
-          try {
-            const data = await (await fetch(base + file)).arrayBuffer();
-            this.samples.set(name, await c.decodeAudioData(data));
-            const cut = name.lastIndexOf('~');
-            if (cut > 0) this.sampleTakes.set(name.slice(0, cut), Math.max(this.sampleTakes.get(name.slice(0, cut)) ?? 0, Number(name.slice(cut + 1)) + 1));
-          } catch {
-            /* keep the generated version */
-          }
-        }),
-      );
+      for (const [name, file] of Object.entries(manifest)) {
+        const sound = soundOf(name);
+        const takes = this.onFile.get(sound) ?? [];
+        takes.push([name, base + file]);
+        this.onFile.set(sound, takes);
+        if (!onDemand(sound)) first.add(sound);
+      }
     } catch {
       /* this build carries no recordings */
     }
+    this.listed = true;
+    for (const n of this.wanted) first.add(n);
+    this.wanted.clear();
+    await Promise.all([...first].map((n) => this.loadSound(n)));
+  }
+
+  /** Fetches and decodes every take of one sound. */
+  private loadSound(sound: string): Promise<void> {
+    const c = this.ctx;
+    const takes = this.onFile.get(sound);
+    if (!c || !takes || this.samples.has(sound) || this.sampleTakes.has(sound)) return Promise.resolve();
+    const running = this.pending.get(sound);
+    if (running) return running;
+    const loop = sound.startsWith('amb') || sound === 'rotor';
+    const job = Promise.all(
+      takes.map(async ([name, url]) => {
+        try {
+          const decoded = await c.decodeAudioData(await (await fetch(url)).arrayBuffer());
+          const buf = loop ? seamless(c, decoded) : decoded;
+          if (!loop) this.leads.set(buf, leadIn(buf));
+          this.samples.set(name, buf);
+        } catch {
+          /* keep the generated version */
+        }
+      }),
+    ).then(() => {
+      this.pending.delete(sound);
+      // Takes are numbered from 0; count them only if every one arrived, so a random pick never misses.
+      const numbered = takes.filter(([name]) => name !== sound);
+      if (numbered.length && numbered.every(([name]) => this.samples.has(name))) this.sampleTakes.set(sound, numbered.length);
+      if (loop && this.wantAmb.some((a) => a.split(':')[0] === sound)) this.setAmbience(this.wantAmb, this.battle);
+    });
+    this.pending.set(sound, job);
+    return job;
+  }
+
+  /**
+   * Plays one spoken story line if its recording is in memory, and returns how long it runs in seconds
+   * (0 when there is nothing to play). Everything else is turned down a little while it is said.
+   */
+  speak(name: string, o: PlayOpts = {}): number {
+    const c = this.ctx;
+    const buf = this.samples.get(name);
+    if (!c || c.state !== 'running' || !buf) return 0;
+    const seconds = buf.duration - (this.leads.get(buf) ?? 0);
+    this.play(name, { bus: 'ui', ...o });
+    const t = c.currentTime + (o.delay ?? 0);
+    const level = store.settings.sfx;
+    this.sfx.gain.cancelScheduledValues(t);
+    this.sfx.gain.setTargetAtTime(level * 0.6, t, 0.08);
+    this.sfx.gain.setTargetAtTime(level, t + seconds, 0.3);
+    return seconds;
   }
 
   /**
@@ -850,7 +986,7 @@ class AudioSys {
    * falls back to `fallback` (a generated sound), so the cue is never lost.
    */
   say(lines: string[], o: PlayOpts = {}, fallback = ''): void {
-    const ready = lines.filter((l) => this.samples.has(l));
+    const ready = lines.filter((l) => this.samples.has(l) || this.sampleTakes.has(l));
     if (ready.length) this.play(ready[Math.floor(Math.random() * ready.length)], o);
     else if (fallback) this.play(fallback, o);
   }
@@ -941,7 +1077,7 @@ class AudioSys {
       gain.disconnect();
     };
     // Sound takes time to travel: far shots are heard late.
-    src.start(c.currentTime + (o.delay ?? 0) + (positional ? Math.min(0.6, dist / 343) : 0));
+    src.start(c.currentTime + (o.delay ?? 0) + (positional ? Math.min(0.6, dist / 343) : 0), this.leads.get(buf) ?? 0);
   }
 
   /** Rate-limited play, for sounds that could fire many times a frame (impacts, casings). */
@@ -1004,8 +1140,15 @@ class AudioSys {
       l.src.stop(c.currentTime + 2);
     }
     this.loops = [];
+    const keep = new Set(names.map((name) => name.split(':')[0]));
+    for (const sound of this.onFile.keys()) if (sound.startsWith('amb') && !keep.has(sound)) this.release(sound);
     for (const name of names) {
       const [n, v] = name.split(':');
+      // A recorded loop that is still being fetched starts when it arrives (loadSound calls back here).
+      if (!this.samples.has(n) && (this.onFile.has(n) || !this.listed)) {
+        this.prepare(n);
+        if (this.onFile.has(n) || onDemand(n)) continue;
+      }
       const buf = this.buffer(n);
       if (!buf) continue;
       const src = c.createBufferSource();
@@ -1225,8 +1368,10 @@ class AudioSys {
         const a = Math.random() * TAU;
         const d = 180 + Math.random() * 260;
         const n = Math.random() < 0.15 ? 1 : 2 + Math.floor(Math.random() * 6);
-        for (let i = 0; i < n; i++) {
-          this.play(n === 1 ? 'explosion' : 'shotRifle', { x: this.lx + Math.cos(a) * d, y: this.ly, z: this.lz + Math.sin(a) * d, ref: n === 1 ? 60 : 22, vol: 0.9, delay: i * (0.09 + Math.random() * 0.05) });
+        // Recorded far-off gunfire is already distant: place it near enough that it is not filtered twice.
+        if (n > 1 && this.has('distant')) this.play('distant', { x: this.lx + Math.cos(a) * 55, y: this.ly, z: this.lz + Math.sin(a) * 55, ref: 40, vol: 0.55 });
+        else for (let i = 0; i < n; i++) {
+          this.play(n === 1 ? 'explosion' : 'shotAr', { x: this.lx + Math.cos(a) * d, y: this.ly, z: this.lz + Math.sin(a) * d, ref: n === 1 ? 60 : 22, vol: 0.9, delay: i * (0.09 + Math.random() * 0.05) });
         }
       }
     }

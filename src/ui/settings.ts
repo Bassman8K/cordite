@@ -115,7 +115,7 @@ export function settingsScreen(ui: UI): HTMLElement {
       slider('Master volume', '', 'master', 0, 1, 0.05, pct, () => audio.applyVolumes());
       slider('Effects', 'Weapons, impacts, footsteps, ambience.', 'sfx', 0, 1, 0.05, pct, () => audio.applyVolumes());
       slider('Music', 'The score follows the fight: quiet when you are unseen, driving in contact.', 'music', 0, 1, 0.05, pct, () => audio.applyVolumes());
-      rows.append(el('p', 'note', 'All audio is synthesised on your device. The game ships with no sound files.'));
+      rows.append(el('p', 'note', 'Gunfire, reloads, footsteps, impacts and voices are recordings. Music and interface sounds are generated on your device.'));
     } else if (tab === 'controls') {
       slider('Look sensitivity', '', 'sens', 0.2, 3, 0.05, (v) => v.toFixed(2));
       slider('Aiming sensitivity', 'Multiplier while aiming down sights (scaled further by zoom).', 'adsSens', 0.2, 1.5, 0.05, (v) => v.toFixed(2));

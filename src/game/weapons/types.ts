@@ -19,7 +19,15 @@ export const CLASS_ORDER: WeaponClass[] = ['handgun', 'smg', 'assault', 'battle'
 export type FireMode = 'auto' | 'semi' | 'burst2' | 'burst3' | 'bolt' | 'pump' | 'lever' | 'da' | 'sa' | 'single';
 export type Feed = 'box' | 'drum' | 'pan' | 'belt' | 'helical' | 'tube' | 'internal' | 'enbloc' | 'cyl' | 'gate' | 'single' | 'double' | 'tank' | 'none';
 export type Projectile = 'bullet' | 'rocket' | 'grenade' | 'flame' | 'arrow' | 'taser' | 'flare';
-export type SoundClass = 'shotPistol' | 'shotMagnum' | 'shotSmg' | 'shotRifle' | 'shotBattle' | 'shotSniper' | 'shotAmr' | 'shotShotgun' | 'shotLmg' | 'shotMini' | 'shotSup' | 'shotLauncher' | 'shotThump' | 'shotBow' | 'shotTaser' | 'flame';
+/**
+ * What a weapon sounds like when fired. Each class is a set of recordings of real weapons firing that
+ * cartridge (see public/audio/CREDITS.txt); the last five have no recorded counterpart.
+ */
+export type SoundClass =
+  | 'shot22' | 'shotPistol' | 'shot45' | 'shotMagnum' | 'shotSmg' | 'shotPdw'
+  | 'shotAr' | 'shotAk' | 'shotBattle' | 'shotGarand' | 'shotBolt' | 'shotSniper' | 'shotAmr'
+  | 'shotShotgun' | 'shotLmg' | 'shotLmgLight' | 'shotHmg' | 'shotMini' | 'shotSup' | 'shotSupHeavy'
+  | 'shotThump' | 'shotBow' | 'shotLauncher' | 'shotTaser' | 'flame';
 
 export interface Caliber {
   label: string;

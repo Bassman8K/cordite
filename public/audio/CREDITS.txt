@@ -1,7 +1,10 @@
 Recorded audio in this folder
 =============================
 
-Voice lines (vo_*.mp3, hq_*.mp3)
+Nothing here is synthesised gunfire. Every shot, reload, footstep, impact and explosion is a
+recording of the real thing, cut and levelled by scripts/make-audio.mjs.
+
+Soldiers' voices (vo_*.mp3, vo2_*.mp3)
   Kenney "Voiceover Pack", www.kenney.nl. Male voice: Jeffrey M. Smith.
   Creative Commons Zero (CC0). https://opengameart.org/content/voiceover-pack-40-lines
 
@@ -9,12 +12,118 @@ Pain and death sounds (pain_*.mp3, death_*.mp3)
   "Male Grunt/Yelling sounds" by megaboots.
   Creative Commons Zero (CC0). https://opengameart.org/content/male-gruntyelling-sounds
 
-Gunshots (shot*.flac)
-  Recordings of a CZ-52 pistol, an SKS, a Mosin-Nagant rifle and a shotgun,
+Story dialogue (say_*.mp3, hq_*.mp3)
+  Spoken by Piper (https://github.com/OHF-Voice/piper1-gpl), a neural voice that runs offline,
+  with voices their speakers released into the public domain:
+    OVERWATCH  en_GB-cori-high
+    KESTREL    en_US-joe-medium
+    WREN       en_US-kristin-medium
+    RUSK       en_US-norman-medium
+  These are computer voices modelled on real people, not performances by actors.
+
+Gunshots, part (shotAk_5.flac, shotAk_6.flac, shotBolt_0.flac, shotBolt_1.flac, shotShotgun_5.flac)
+  Recordings of an SKS, a Mosin-Nagant rifle and a shotgun,
   Copyright (c) 2009 Vincent Sevedge, Creative Commons Attribution 3.0 Unported
   (https://creativecommons.org/licenses/by/3.0/), from
   https://opengameart.org/content/gunshot-sounds
-  Changes: individual shots cut out, re-pitched for different weapon classes and
-  mixed with generated low-frequency and tail layers by scripts/make-audio.mjs.
+  Changes: individual shots cut out and levelled.
 
-Everything else the game plays is generated in code.
+Footsteps and impacts, part
+  "Different steps on wood, stone, leaves, gravel and mud" and "Impact" by qubodup, CC0,
+  https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud
+  https://opengameart.org/content/impact
+  "Walking in snow" by Corsica_S, CC0, https://opengameart.org
+
+Freesound recordings under Creative Commons Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+Changes: single events cut out, rumble removed, levelled.
+  SIG Sauer SIG716.mp3 - areniporgen - CC BY 4.0 - https://freesound.org/s/692584/
+  Smith & Wesson M&P 9 Exterior.wav - areniporgen - CC BY 4.0 - https://freesound.org/s/692587/
+  Motorola PTT.mp3 - areniporgen - CC BY 4.0 - https://freesound.org/s/692588/
+
+Freesound recordings in the public domain (CC0), credited with thanks
+  M67 Fragmentation Grenade Explosion 3 - qubodup - CC0 - https://freesound.org/s/67472/
+  M16 Single Shot 3.flac - qubodup - CC0 - https://freesound.org/s/162396/
+  M203 Grenade Launcher 2 - qubodup - CC0 - https://freesound.org/s/162401/
+  M203 Grenade Launcher 1 - qubodup - CC0 - https://freesound.org/s/162402/
+  M16 Single Shot 5.flac - qubodup - CC0 - https://freesound.org/s/162403/
+  Shotgun Shot - LeMudCrab - CC0 - https://freesound.org/s/163455/
+  AK47 Shot - LeMudCrab - CC0 - https://freesound.org/s/163457/
+  Grenade Launcher - LeMudCrab - CC0 - https://freesound.org/s/163458/
+  Magazine Insert - brianhanson2nd - CC0 - https://freesound.org/s/171209/
+  Mag Reload 1.mp3 - Pjkasinski3 - CC0 - https://freesound.org/s/171614/
+  Explosive 1 v3 [DOD 130303].flac - qubodup - CC0 - https://freesound.org/s/182430/
+  Explosive 1 v2 [DOD 130303].flac - qubodup - CC0 - https://freesound.org/s/182431/
+  Explosive 1 v1 [DOD 130303].flac - qubodup - CC0 - https://freesound.org/s/182432/
+  Helicopter Rotor Loop.flac - qubodup - CC0 - https://freesound.org/s/187681/
+  50 Cal MG - qubodup - CC0 - https://freesound.org/s/239138/
+  Bow Release (Bow and Arrow) 3 - Ali_6868 - CC0 - https://freesound.org/s/384918/
+  Rifle Shot (M1 Garand) - Rijam - CC0 - https://freesound.org/s/385785/
+  Ricochet 4.wav - saturdaysoundguy - CC0 - https://freesound.org/s/394187/
+  footstep_metal.ogg - raceynovel - CC0 - https://freesound.org/s/398554/
+  Shotgun Shot 01.wav - LilMati - CC0 - https://freesound.org/s/405504/
+  Footstep_Metal_Crouch_5.wav - GiocoSound - CC0 - https://freesound.org/s/421151/
+  9mm pistol shot - michorvath - CC0 - https://freesound.org/s/427592/
+  9mm pistol load and chamber - michorvath - CC0 - https://freesound.org/s/427593/
+  22 magnum pistol shot - michorvath - CC0 - https://freesound.org/s/427594/
+  20 gauge shotgun gunshot - michorvath - CC0 - https://freesound.org/s/427595/
+  AR15 rifle shot - michorvath - CC0 - https://freesound.org/s/427596/
+  AR15 pistol load and chamber - michorvath - CC0 - https://freesound.org/s/427599/
+  Rifle clip empty - michorvath - CC0 - https://freesound.org/s/427603/
+  gun lee enfield 303 rifle fire shot loud badass crispy.wav - kyles - CC0 - https://freesound.org/s/450852/
+  Shotgun Shot 03.wav - LilMati - CC0 - https://freesound.org/s/473846/
+  Clean Machine Gun Burst - qubodup - CC0 - https://freesound.org/s/482122/
+  BODY FALL - V HVY - DIRT - leonelmail - CC0 - https://freesound.org/s/504626/
+  Headshot.wav - Pablobd - CC0 - https://freesound.org/s/511194/
+  ak 47 - single shot.mp3 - ninebilly - CC0 - https://freesound.org/s/520934/
+  Sniper Rifle Instant Kill Shots 02 - LilMati - CC0 - https://freesound.org/s/524738/
+  Sniper Rifle Instant Kill Shots 01 - LilMati - CC0 - https://freesound.org/s/524739/
+  Authentic M60 Firing.mp3 - FranklinRook1984 - CC0 - https://freesound.org/s/538302/
+  Shotgun Rack Sample.wav - Krovi - CC0 - https://freesound.org/s/613801/
+  22 bolt action rifle cycle - Metrolynn - CC0 - https://freesound.org/s/620928/
+  50 cal shot.wav - ajhartman42295 - CC0 - https://freesound.org/s/668071/
+  Shotgun Pump.wav - Dentrabert - CC0 - https://freesound.org/s/673320/
+  Colt M16A1.wav - areniporgen - CC0 - https://freesound.org/s/693546/
+  HK51.wav - areniporgen - CC0 - https://freesound.org/s/693547/
+  FN FNX .45 Tactical (SilencerCo Osprey).mp3 - areniporgen - CC0 - https://freesound.org/s/693855/
+  KAC LAMG.wav - areniporgen - CC0 - https://freesound.org/s/693856/
+  Izhmash Saiga MK-106.wav - areniporgen - CC0 - https://freesound.org/s/696023/
+  Izhmash Saiga MK Ver. 030 - areniporgen - CC0 - https://freesound.org/s/698984/
+  Rain on concrete.wav - areniporgen - CC0 - https://freesound.org/s/700155/
+  Radio Roger.mp3 - areniporgen - CC0 - https://freesound.org/s/700160/
+  FN SCAR-H - areniporgen - CC0 - https://freesound.org/s/702225/
+  Remington 870 - areniporgen - CC0 - https://freesound.org/s/702672/
+  Colt Model 733, Exterior close - areniporgen - CC0 - https://freesound.org/s/704511/
+  SIG Sauer P226 Legion Exterior Close - areniporgen - CC0 - https://freesound.org/s/711549/
+  Steps on concrete, indoor - areniporgen - CC0 - https://freesound.org/s/712084/
+  SIG Sauer P220 exterior - areniporgen - CC0 - https://freesound.org/s/712085/
+  Vektor CP1 - areniporgen - CC0 - https://freesound.org/s/712087/
+  Magnum Research Desert Eagle - areniporgen - CC0 - https://freesound.org/s/712310/
+  An M1 Garand clip being ejected w/ ping - serøutōnin--deprivəd - CC0 - https://freesound.org/s/725398/
+  A rifle being dry fired once - serøutōnin--deprivəd - CC0 - https://freesound.org/s/725402/
+  IWI Negev NG-7 - areniporgen - CC0 - https://freesound.org/s/725798/
+  Heckler & Koch MP7 Suppressed (Semi & Full Auto) - areniporgen - CC0 - https://freesound.org/s/732250/
+  Guncrafter Industries Glock 20SF - areniporgen - CC0 - https://freesound.org/s/734055/
+  ASP Pistol - areniporgen - CC0 - https://freesound.org/s/734061/
+  Heckler & Koch USP45 - areniporgen - CC0 - https://freesound.org/s/734062/
+  Colt M4A1 SOCOM - areniporgen - CC0 - https://freesound.org/s/737569/
+  MacMillan Tac-50A1-R2 Suppressed - areniporgen - CC0 - https://freesound.org/s/737570/
+  FN P90 (Full Auto) - areniporgen - CC0 - https://freesound.org/s/740896/
+  Colt 1911 - areniporgen - CC0 - https://freesound.org/s/740897/
+  Small_Bullet_Very_Soft_Hit_07 - BlondPanda - CC0 - https://freesound.org/s/778028/
+  Fly-by whiz SFX (subsonic) - modusmogulus - CC0 - https://freesound.org/s/789222/
+  Handgun clip change - CoalescenceGames - CC0 - https://freesound.org/s/812532/
+  Assault Rifle Reload - qubodup - CC0 - https://freesound.org/s/815879/
+  Springfield Armory 1911 Operator (Suppressed) - areniporgen - CC0 - https://freesound.org/s/827945/
+  Glock 19X - areniporgen - CC0 - https://freesound.org/s/828786/
+  SIG Sauer P226 (Suppressed) - areniporgen - CC0 - https://freesound.org/s/828790/
+  Glock 17 Trigger Pull - qubodup - CC0 - https://freesound.org/s/842748/
+  Gentle Ocean Waves Loop - kkenny101 - CC0 - https://freesound.org/s/852826/
+  Distant Machine Gun Firing - qubodup - CC0 - https://freesound.org/s/854635/
+  Distant Gunfire 1 - qubodup - CC0 - https://freesound.org/s/855242/
+  Distant Gunfire 2 - qubodup - CC0 - https://freesound.org/s/855243/
+  Distant Gunfire 3 - qubodup - CC0 - https://freesound.org/s/855244/
+  Real Bullet Flyby Sound - qubodup - CC0 - https://freesound.org/s/855248/
+  Pulling and Releasing Barrett M82A1 Charging Handle to Load Round 2 - qubodup - CC0 - https://freesound.org/s/855599/
+  Sniper Shot in Field 3 (M2010 Enhanced Sniper Rifle ESR) - qubodup - CC0 - https://freesound.org/s/855608/
+
+Music, interface sounds, wind and a few small effects are generated in code.

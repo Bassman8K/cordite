@@ -1,0 +1,21 @@
+Photographed surface materials in this folder
+=============================================
+
+From ambientCG (https://ambientcg.com), by Lennart Demes and contributors.
+Creative Commons Zero (CC0 1.0), credited with thanks.
+
+  concrete_*.jpg     Concrete046  https://ambientcg.com/a/Concrete046
+  asphalt_*.jpg      Asphalt031  https://ambientcg.com/a/Asphalt031
+  brick_*.jpg        Bricks097  https://ambientcg.com/a/Bricks097
+  plaster_*.jpg      Plaster007  https://ambientcg.com/a/Plaster007
+  rock_*.jpg         Rock030  https://ambientcg.com/a/Rock030
+  dirt_*.jpg         Ground110  https://ambientcg.com/a/Ground110
+  sand_*.jpg         Ground054  https://ambientcg.com/a/Ground054
+  snow_*.jpg         Snow010A  https://ambientcg.com/a/Snow010A
+  grass_*.jpg        Grass004  https://ambientcg.com/a/Grass004
+  planks_*.jpg       Planks037A  https://ambientcg.com/a/Planks037A
+  rust_*.jpg         Metal021  https://ambientcg.com/a/Metal021
+  corrugated_*.jpg   CorrugatedSteel005  https://ambientcg.com/a/CorrugatedSteel005
+
+Changes: resized to 512 pixels, colour toned to the level palette, occlusion and roughness
+packed into one image, by scripts/make-textures.mjs.

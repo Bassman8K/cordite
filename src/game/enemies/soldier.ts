@@ -144,7 +144,9 @@ const v = new THREE.Vector3();
 export class Enemy {
   readonly id = nextId++;
   /** Playback rate of this soldier's voice, so a squad does not all sound like one man. */
-  readonly voice = 0.9 + ((this.id * 0.6180339887) % 1) * 0.2;
+  readonly voice = 0.92 + ((this.id * 0.6180339887) % 1) * 0.16;
+  /** Which of the two recorded voice actors speaks for this soldier. */
+  readonly actor = (this.id * 0.7548776662) % 1 < 0.36 ? 'vo2' : 'vo';
   private lastPain = -9;
   readonly arch: Archetype;
   readonly weapon: WeaponDef;

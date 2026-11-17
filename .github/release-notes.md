@@ -1,3 +1,5 @@
+**New in 0.3.0.** Every firearm now fires a recording of the real weapon, one set per cartridge (9 mm, .45, 5.56, 7.62×39, 7.62 NATO, .30-06, .50 BMG and more). The story is spoken aloud over the radio. Soldiers call out far more often, in two voices. Reloads, footsteps, bullet impacts, fly-bys and grenades are recordings, and walls and ground are photographs of the real material. The game grows from 2.7 MB to about 10 MB.
+
 Pick the file for your system, or let the [website](https://bassman8k.github.io/cordite/) choose for you.
 
 | Platform | File |

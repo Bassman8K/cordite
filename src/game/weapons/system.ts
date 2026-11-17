@@ -122,7 +122,7 @@ export class PlayerWeapons {
     this.rig.setWeapon(this.gun.def, this.gun.model);
     this.rig.setMelee(this.melee);
     this.game.events.emit('weapon', undefined);
-    this.game.audio.warm([this.guns[0].def.sound, this.guns[1].def.sound, 'magOut', 'magIn', 'casing']);
+    this.game.audio.warm([this.guns[0].def.sound, this.guns[1].def.sound]);
   }
 
   /** Full restock (ammo crates, checkpoints). */
@@ -261,7 +261,7 @@ export class PlayerWeapons {
     if (d.proj === 'flame') game.fx.flame(mw.x, mw.y, mw.z, this.dir.x * d.mv + p.vel.x, this.dir.y * d.mv, this.dir.z * d.mv + p.vel.z);
     const selfLoading = d.cycle === 0 && d.feed !== 'cyl' && d.feed !== 'gate' && d.feed !== 'single' && d.feed !== 'double';
     if (bullet && selfLoading) this.ejectCasing();
-    if (d.feed === 'enbloc' && g.mag === 0) game.audio.play('casing', { vol: 0.9, rate: 1.5 });
+    if (d.feed === 'enbloc' && g.mag === 0) game.audio.play('ping', { vol: 0.8, delay: 0.05 });
     if (d.proj === 'arrow') this.rig.hideMag(true);
     // Manual actions must be worked before the next shot.
     if (d.cycle > 0 && g.mag > 0) {
@@ -407,7 +407,7 @@ export class PlayerWeapons {
           }
           if (!this.rackDone && u > 0.82) {
             this.rackDone = true;
-            game.audio.play('bolt', { vol: 0.7, rate: 1.2 });
+            game.audio.play(d.cls === 'mg' || d.sound === 'shotAmr' || d.sound === 'shotHmg' ? 'boltHeavy' : d.modes[0] === 'bolt' ? 'boltAction' : 'bolt', { vol: 0.75 });
           }
           if (this.busyT <= 0) {
             this.finishReload();
@@ -417,7 +417,7 @@ export class PlayerWeapons {
       } else if (this.busy === 'cycle') {
         if (!this.rackDone && u > 0.25) {
           this.rackDone = true;
-          game.audio.play(d.modes[0] === 'pump' ? 'pump' : d.modes[0] === 'sa' ? 'click' : 'bolt', { vol: 0.75 });
+          game.audio.play(d.modes[0] === 'pump' ? 'pump' : d.modes[0] === 'sa' ? 'click' : d.modes[0] === 'bolt' ? 'boltAction' : 'bolt', { vol: 0.8 });
           if (d.proj === 'bullet' && d.modes[0] !== 'sa') this.ejectCasing();
         }
         if (this.busyT <= 0) this.busy = 'none';

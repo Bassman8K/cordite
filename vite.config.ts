@@ -17,8 +17,9 @@ function offlinePlugin(): Plugin {
       const files = Object.keys(bundle).filter((f) => !f.endsWith('.map') && f !== 'sw.js');
       const art = existsSync('public/art') ? readdirSync('public/art').filter((f) => f.endsWith('.jpg')).map((f) => `art/${f}`) : [];
       const recorded = existsSync('public/audio') ? readdirSync('public/audio').filter((f) => /\.(mp3|flac|json)$/.test(f)).map((f) => `audio/${f}`) : [];
-      const extra = ['./', 'manifest.webmanifest', 'icons/favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', ...art, ...recorded];
-      const hash = createHash('sha1').update(files.join('|') + recorded.join('|') + pkg.version).digest('hex').slice(0, 10);
+      const surfaces = existsSync('public/tex') ? readdirSync('public/tex').filter((f) => f.endsWith('.jpg')).map((f) => `tex/${f}`) : [];
+      const extra = ['./', 'manifest.webmanifest', 'icons/favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', ...art, ...recorded, ...surfaces];
+      const hash = createHash('sha1').update(files.join('|') + recorded.join('|') + surfaces.join('|') + pkg.version).digest('hex').slice(0, 10);
       const source = `const CACHE = 'cordite-${hash}';
 const FILES = ${JSON.stringify([...extra, ...files])};
 self.addEventListener('install', (e) => {

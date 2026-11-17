@@ -1,7 +1,7 @@
 {
   "name": "cordite",
   "productName": "Cordite",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "CORDITE - a lightweight single-player tactical shooter with a six-chapter campaign, human enemies with real voices and an arsenal of 450+ real-world weapons.",
   "license": "MIT",
