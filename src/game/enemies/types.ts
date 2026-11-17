@@ -44,6 +44,9 @@ const WINTER: SoldierLook = { uniform: [0.5, 0.53, 0.57], vest: [0.2, 0.22, 0.24
 const ELITE: SoldierLook = { uniform: [0.13, 0.14, 0.16], vest: [0.07, 0.075, 0.085], helmet: [0.09, 0.095, 0.105], face: [0.06, 0.06, 0.07], boots: [0.04, 0.04, 0.04], pack: false, visor: true };
 const HEAVY: SoldierLook = { uniform: [0.16, 0.17, 0.15], vest: [0.08, 0.085, 0.075], helmet: [0.09, 0.095, 0.085], face: [0.04, 0.04, 0.04], boots: [0.04, 0.04, 0.04], pack: true, visor: true };
 
+/** The player's own side: olive drab, so they are never mistaken for the tan, grey, white or black of the enemy. */
+const SQUAD: SoldierLook = { uniform: [0.21, 0.27, 0.15], vest: [0.12, 0.15, 0.09], helmet: [0.19, 0.24, 0.14], face: [0.42, 0.3, 0.23], boots: [0.09, 0.07, 0.05], pack: true, visor: false };
+
 const base: Omit<Archetype, 'id' | 'name' | 'weapon' | 'look'> = {
   hp: 100, armor: 0, speed: 4.6, range: [6, 22, 70], accuracy: 2.6, burst: [2, 4], pause: [0.7, 1.6], aggression: 0.45, grenades: 0, sight: 1, scale: 1,
 };
@@ -63,5 +66,8 @@ export const ARCHETYPES: Record<string, Archetype> = {
   eliterusher: { ...base, id: 'eliterusher', name: 'Corvane breacher', hp: 130, armor: 0.3, weapon: 'mp7', speed: 5.9, range: [2, 9, 30], accuracy: 2.8, burst: [5, 9], pause: [0.3, 0.7], aggression: 1, look: ELITE },
   elitesniper: { ...base, id: 'elitesniper', name: 'Corvane sniper', hp: 110, armor: 0.2, weapon: 'awm', range: [30, 90, 220], accuracy: 0.5, burst: [1, 1], pause: [2.2, 3.6], aggression: 0, sight: 3, look: ELITE, glint: true, aimTime: 1.5 },
   eliteheavy: { ...base, id: 'eliteheavy', name: 'Corvane gunner', hp: 280, armor: 0.5, weapon: 'mk48', speed: 3.3, range: [8, 28, 90], accuracy: 2.7, burst: [8, 16], pause: [0.9, 1.8], aggression: 0.35, scale: 1.1, look: HEAVY },
+  // The player's squad. They cannot be hurt, so hit points and armour mean nothing here.
+  ally: { ...base, id: 'ally', name: 'Squad rifleman', weapon: 'm4a1', speed: 5.4, range: [3, 18, 85], accuracy: 3.0, burst: [2, 4], pause: [0.9, 1.9], sight: 1.3, look: SQUAD },
+  allygunner: { ...base, id: 'allygunner', name: 'Squad gunner', weapon: 'm249', speed: 5.2, range: [5, 24, 90], accuracy: 3.8, burst: [4, 7], pause: [1.3, 2.4], sight: 1.3, look: { ...SQUAD, pack: false } },
   boss: { ...base, id: 'boss', name: 'Major Rusk', hp: 1100, armor: 0.55, weapon: 'aa12', speed: 4.2, range: [3, 12, 40], accuracy: 2.6, burst: [3, 6], pause: [0.5, 1.1], aggression: 0.8, grenades: 4, sight: 1.5, scale: 1.14, look: { ...HEAVY, uniform: [0.2, 0.05, 0.04], helmet: [0.12, 0.03, 0.03] } },
 };

@@ -20,6 +20,8 @@ interface Bullet {
   speed: number;
   def: WeaponDef;
   player: boolean;
+  /** Fired by the player's squad. */
+  ally: boolean;
   owner: Enemy | null;
   scale: number;
   pen: number;
@@ -79,7 +81,7 @@ export class Combat {
 
   constructor(private readonly game: Game) {
     for (let i = 0; i < MAX_BULLETS; i++) {
-      this.bullets.push({ on: false, x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 1, speed: 0, def: null as unknown as WeaponDef, player: false, owner: null, scale: 1, pen: 0, life: 0, dist: 0, bright: false, whizzed: false });
+      this.bullets.push({ on: false, x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 1, speed: 0, def: null as unknown as WeaponDef, player: false, ally: false, owner: null, scale: 1, pen: 0, life: 0, dist: 0, bright: false, whizzed: false });
     }
   }
 
@@ -103,7 +105,11 @@ export class Combat {
   // ------------------------------------------------------------------ spawning
 
   /** Launches one projectile of the weapon along a (normalised) direction. */
-  fire(def: WeaponDef, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, player: boolean, owner: Enemy | null, scale = 1): void {
+  /**
+   * `player` rounds are the player's own. `ally` rounds were fired by the player's squad: they hit the
+   * enemy like the player's, but are not counted as the player's shooting and never hit the player.
+   */
+  fire(def: WeaponDef, ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, player: boolean, owner: Enemy | null, scale = 1, ally = false): void {
     if (def.proj === 'bullet') {
       let b: Bullet | null = null;
       for (let i = 0; i < MAX_BULLETS; i++) {
@@ -123,6 +129,7 @@ export class Combat {
       b.speed = def.mv * rand(0.985, 1.015);
       b.def = def;
       b.player = player;
+      b.ally = ally;
       b.owner = owner;
       b.scale = scale;
       b.pen = def.pen;
@@ -306,14 +313,15 @@ export class Combat {
         let target: Enemy | null = null;
         let tHit = limit;
         let part: 'head' | 'torso' | 'legs' = 'torso';
-        const e = b.player ? g.enemies.raycast(b.x, b.y, b.z, b.dx, b.dy, b.dz, limit) : null;
+        const ours = b.player || b.ally;
+        const e = ours ? g.enemies.raycast(b.x, b.y, b.z, b.dx, b.dy, b.dz, limit) : null;
         if (e) {
           target = e.enemy;
           tHit = e.t;
           part = e.part;
         }
         let playerHit = false;
-        if (!b.player && p.alive) {
+        if (!ours && p.alive) {
           const tp = rayCylinder(b.x, b.y, b.z, b.dx, b.dy, b.dz, p.pos.x, p.pos.y, p.pos.z, 0.33, p.height, tHit);
           if (tp >= 0) {
             playerHit = true;
@@ -322,7 +330,7 @@ export class Combat {
           }
         }
         // Rounds snapping past the player's head.
-        if (!b.player && !b.whizzed && !playerHit) {
+        if (!ours && !b.whizzed && !playerHit) {
           const t = clamp((cam.x - b.x) * b.dx + (cam.y - b.y) * b.dy + (cam.z - b.z) * b.dz, 0, tHit);
           const d = Math.hypot(b.x + b.dx * t - cam.x, b.y + b.dy * t - cam.y, b.z + b.dz * t - cam.z);
           if (d < 2.2 && t > 0 && t < tHit) {
@@ -351,13 +359,17 @@ export class Combat {
             g.stats.hits++;
             if (killed && part === 'head') g.stats.headshots++;
             g.events.emit('hit', { kill: killed, head: part === 'head', dist: b.dist + tHit });
+          } else if (b.ally && b.owner) {
+            // Shot by the squad: the man who is hit turns on whoever shot him.
+            if (killed) b.owner.onKill();
+            else target.hear(b.owner.pos.x, b.owner.pos.y, b.owner.pos.z, true);
           }
           if (b.def.blast) this.explode(hx, hy, hz, b.def.blast.r, b.def.blast.dmg, b.player);
           b.on = false;
         } else if (hw) {
           fx.impact(hx, hy, hz, hit.nx, hit.ny, hit.nz, hit.surf, b.def.energy > 5000 ? 1.8 : 1);
           g.audio.impact(hit.surf, hx, hy, hz);
-          if (b.player) g.enemies.hearNoise(hx, hy, hz, 9, false);
+          if (ours) g.enemies.hearNoise(hx, hy, hz, 9, false);
           const prop = hit.solid?.tag as PropDef | undefined;
           if (prop && prop.kind) g.level?.damageProp(prop, dmg);
           if (b.def.blast) {

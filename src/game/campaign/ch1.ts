@@ -262,7 +262,8 @@ export const ch1: ChapterDef = {
       enter: (m) => {
         m.spawn('start', 'yard', 'office');
         m.radio('OVERWATCH', 'Kestrel, you are inside the wire. Gate into the stacks is north of you. Six on the outer yard, more beyond.', 1.5);
-        m.radio('OVERWATCH', 'Stay out of the lamps and they will not see you until you are close.', 8);
+        if (m.squad) m.radio('OVERWATCH', 'Merlin and Shrike are on your shoulder. They hold their fire until you start it.', 8);
+        m.radio('OVERWATCH', 'Stay out of the lamps and they will not see you until you are close.', m.squad ? 14 : 8);
       },
     },
     {

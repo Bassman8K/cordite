@@ -218,7 +218,8 @@ export const ch6: ChapterDef = {
         m.spawn('wall', 'beach');
         m.after(2.5, () => m.alert('wall', 'beach'));
         m.radio('OVERWATCH', 'Cape Solace. Gate is dead ahead, two hundred metres. Snipers on the gate towers, guns on the corners. This is the last one, Kestrel.', 1.2);
-        m.radio('RUSK', 'One man. They sent one man. Somebody shoot him.', 9);
+        if (m.squad) m.radio('RUSK', 'Three of them. They sent three. Somebody shoot them.', 9);
+        else m.radio('RUSK', 'One man. They sent one man. Somebody shoot him.', 9);
       },
     },
     {

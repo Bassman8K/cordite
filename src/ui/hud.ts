@@ -461,6 +461,22 @@ export class Hud {
     const range = 45;
     const cos = Math.cos(p.yaw);
     const sin = Math.sin(p.yaw);
+    // The squad, always shown.
+    for (const a of g.squad.list) {
+      const dx = a.pos.x - p.pos.x;
+      const dz = a.pos.z - p.pos.z;
+      let rx = (dx * cos - dz * sin) / range;
+      let rf = (-dx * sin - dz * cos) / range;
+      const l = Math.hypot(rx, rf);
+      if (l > 1) {
+        rx /= l;
+        rf /= l;
+      }
+      ctx.fillStyle = '#7fd6ff';
+      ctx.beginPath();
+      ctx.arc(cx + rx * R * 0.94, cx - rf * R * 0.94, S * 0.026, 0, 6.283);
+      ctx.fill();
+    }
     for (const e of g.enemies.list) {
       if (!e.alive || e.state === 'idle' || e.state === 'patrol') continue;
       const dx = e.pos.x - p.pos.x;

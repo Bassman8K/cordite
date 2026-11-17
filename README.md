@@ -8,12 +8,13 @@
 
 ## What it is
 
-A private army has stolen LANTERN, a package that turns any guided weapon against whoever launched it. You are KESTREL, and you go in alone.
+A private army has stolen LANTERN, a package that turns any guided weapon against whoever launched it. You are KESTREL, and you go in with two others, Merlin and Shrike, or alone if you prefer.
 
 - **A campaign in six chapters.** A night harbour in the rain, a ruined boulevard, a mountain pass in a blizzard, a desert airfield, an underground lab and a coastal fortress. Each chapter is split into objectives with a checkpoint at every one, and you can start from any chapter you have reached.
 - **460 weapons and counting.** Pistols, submachine guns, assault and battle rifles, sniper and anti-materiel rifles, historic rifles, shotguns, machine guns, launchers, blades and throwables. Each is entered by its real specifications (calibre, muzzle velocity, weight, barrel length, rate of fire, feed), and the game derives recoil, handling, drop and damage from those numbers.
 - **Simulated ballistics.** Every round is a projectile with travel time, drag, gravity and penetration.
 - **Enemies that fight back.** They patrol, investigate noise, take cover, flank, suppress and call for help, out loud: two recorded voice actors shout "Target engaged", "Reloading", "Fire in the hole" and "Medic", and a squad keeps talking for as long as the fight lasts.
+- **A squad at your shoulder.** Merlin and Shrike follow your lead, hold their fire until the shooting starts, then fight beside you and draw their share of the enemy's. They cannot be killed. Turn them off in Settings to go in alone.
 - **Weapons that sound like themselves.** Gunfire is cut from recordings of the real weapons, one set per cartridge: a Glock, a 1911, an M4, an AK-47, a SCAR-H, an M1 Garand, a Mosin-Nagant, a .50 BMG, a Browning M2 and more. Reloads, footsteps, bullet impacts, fly-bys and grenades are recordings too. Nothing is synthesised gunfire.
 - **A spoken story.** Every line your controller, your contact and the man you are hunting say is spoken aloud over the radio, with subtitles.
 - **Photographed surfaces.** Concrete, brick, plaster, rock, sand, snow and steel are photographs of the real material. The worlds built from them, the soldiers and all 460 weapon models are still generated in code when a chapter loads, which is why the whole game is about 10 MB.

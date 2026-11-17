@@ -91,6 +91,11 @@ export class Mission {
 
   // ------------------------------------------------------------------ script API
 
+  /** True when the player has the squad along: a few lines of the story change to suit. */
+  get squad(): boolean {
+    return this.game.squad.list.length > 0;
+  }
+
   radio(who: string, text: string, delay = 0): void {
     if (this.silent) return;
     const key = lineKey(who, text);

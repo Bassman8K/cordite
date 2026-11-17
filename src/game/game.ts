@@ -15,6 +15,7 @@ import { NavGrid } from '../world/navgrid';
 import type { ChapterDef } from './campaign/types';
 import { Combat } from './combat';
 import { EnemyManager } from './enemies/manager';
+import { Squad } from './enemies/squad';
 import { disposeSoldierAssets, type Enemy } from './enemies/soldier';
 import { LevelRuntime } from './level';
 import { Mission } from './mission';
@@ -51,6 +52,8 @@ export class Game {
   readonly fx: FX;
   readonly combat: Combat;
   readonly enemies: EnemyManager;
+  /** The player's own side: teammates who follow, fight and cannot be killed. */
+  readonly squad: Squad;
   readonly player: Player;
   readonly weapons: PlayerWeapons;
   world = new World();
@@ -87,9 +90,10 @@ export class Game {
     this.fx = new FX(engine);
     this.combat = new Combat(this);
     this.enemies = new EnemyManager(this);
+    this.squad = new Squad(this);
     this.player = new Player(this);
     this.weapons = new PlayerWeapons(this);
-    engine.scene.add(this.fx.group, this.combat.group, this.enemies.group);
+    engine.scene.add(this.fx.group, this.combat.group, this.enemies.group, this.squad.group);
     this.weapons.setLoadout(store.progress.loadout);
     this.weapons.rig.setVisible(false);
     this.events.on('damage', (d) => {
@@ -133,6 +137,7 @@ export class Game {
 
   private unload(): void {
     this.enemies.clear();
+    this.squad.clear();
     this.combat.clear();
     this.fx.clear();
     this.fx.setEmitters([]);
@@ -188,6 +193,7 @@ export class Game {
       if (this.chapter !== def || !this.pristine) await this.build(def);
       this.mission = null;
       this.enemies.clear();
+      this.squad.clear();
       this.combat.clear();
       audio.startMusic('menu', (def.env.musicRoot ?? 38) + 12);
       this.setState('menu');
@@ -225,6 +231,7 @@ export class Game {
         store.progress.checkpoint = null;
       }
       p.flashlightOn = false;
+      this.squad.muster();
       this.result = null;
       this.failReason = '';
       this.hurt = 0;
@@ -396,6 +403,7 @@ export class Game {
     this.engine.camera.updateMatrixWorld();
     this.weapons.update(dt);
     this.enemies.update(dt);
+    this.squad.update(dt);
     this.combat.update(dt);
     this.level?.update(dt);
     if (this.state === 'playing') this.mission?.update(dt);

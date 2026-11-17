@@ -87,6 +87,8 @@ export interface Settings {
   difficulty: Difficulty;
   crosshair: boolean;
   radar: boolean;
+  /** Two teammates who fight beside the player and cannot be killed. */
+  squad: boolean;
   subtitles: boolean;
   blood: boolean;
   aimAssist: boolean;
@@ -164,6 +166,7 @@ export function defaultSettings(): Settings {
     difficulty: 'regular',
     crosshair: true,
     radar: true,
+    squad: true,
     subtitles: true,
     blood: true,
     aimAssist: isTouch,

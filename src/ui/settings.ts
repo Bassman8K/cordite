@@ -89,6 +89,7 @@ export function settingsScreen(ui: UI): HTMLElement {
         q(r, '.d').textContent = DIFFICULTY[v].blurb;
       });
       toggle('Crosshair', 'Hip-fire reticle that widens with movement and recoil. Always off on Realist.', 'crosshair');
+      toggle('Squad', 'Merlin and Shrike go in with you. They follow your lead, hold their fire until the shooting starts, and cannot be killed. Takes effect at the next chapter or checkpoint.', 'squad');
       toggle('Threat radar', 'Shows enemies that have noticed you. Always off on Realist.', 'radar');
       toggle('Subtitles', 'Radio traffic as text.', 'subtitles');
       toggle('Blood', 'Impact effects on hits.', 'blood');

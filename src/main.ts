@@ -43,7 +43,7 @@ const debug = {
     stageI: game.mission?.stageI,
     pos: game.player.pos.toArray().map((v) => +v.toFixed(2)),
     health: Math.round(game.player.health),
-    enemies: game.enemies.alive(),
+    enemies: game.enemies.alive(), squad: game.squad.list.length,
     fighting: game.enemies.fighting,
     fps: Math.round(engine.fps),
     calls: engine.drawCalls,

@@ -135,23 +135,41 @@ const SHOULDER_L = new THREE.Vector3(REST[B_ARM_LU][0] - REST[B_SPINE][0], REST[
 const SHOULDER_R = new THREE.Vector3(REST[B_ARM_RU][0] - REST[B_SPINE][0], REST[B_ARM_RU][1] - REST[B_SPINE][1], 0);
 
 export type BodyPart = 'head' | 'torso' | 'legs';
+
+/** Anything a soldier can look for and shoot at: the player, or a soldier on the other side. */
+export interface Mark {
+  readonly pos: THREE.Vector3;
+  readonly vel: { x: number; z: number };
+  readonly speed: number;
+  readonly eyeHeight: number;
+  readonly height: number;
+  readonly alive: boolean;
+}
 type State = 'idle' | 'patrol' | 'investigate' | 'combat' | 'search';
 type Action = 'hold' | 'cover' | 'advance' | 'flank' | 'peek';
 
 let nextId = 1;
 const v = new THREE.Vector3();
 
-export class Enemy {
+export class Enemy implements Mark {
   readonly id = nextId++;
   /** Playback rate of this soldier's voice, so a squad does not all sound like one man. */
-  readonly voice = 0.92 + ((this.id * 0.6180339887) % 1) * 0.16;
+  voice = 0.92 + ((this.id * 0.6180339887) % 1) * 0.16;
   /** Which of the two recorded voice actors speaks for this soldier. */
-  readonly actor = (this.id * 0.7548776662) % 1 < 0.36 ? 'vo2' : 'vo';
-  private lastPain = -9;
+  actor = (this.id * 0.7548776662) % 1 < 0.36 ? 'vo2' : 'vo';
+  /** True for the player's squad: their rounds hit the enemy and never the player. */
+  readonly friendly: boolean = false;
+  /** Horizontal velocity, for anyone leading a shot at this soldier. */
+  readonly vel = { x: 0, z: 0 };
+  /** Whoever this soldier is fighting right now. */
+  protected mark: Mark;
+  protected markAlly: Mark | null = null;
+  protected markT = 0;
+  protected lastPain = -9;
   readonly arch: Archetype;
   readonly weapon: WeaponDef;
   readonly mesh: THREE.SkinnedMesh;
-  private bones: THREE.Bone[] = [];
+  protected bones: THREE.Bone[] = [];
   readonly pos = new THREE.Vector3();
   yaw = 0;
   hp: number;
@@ -166,54 +184,55 @@ export class Enemy {
   canSee = false;
   stunT = 0;
 
-  private crouchT = 0;
-  private fixedY: number | null = null;
-  private alert = 0;
-  private lastSeen = new THREE.Vector3();
-  private sinceSeen = 99;
-  private path: number[] = [];
-  private pathI = 0;
-  private goal: { x: number; z: number } | null = null;
-  private needPath = false;
-  private speedNow = 0;
-  private phase = Math.random() * 6;
-  private patrol: number[] | undefined;
-  private patrolI = 0;
-  private waitT = 0;
-  private cover: CoverPoint | null = null;
-  private action: Action = 'hold';
-  private actionT = 0;
-  private ammo: number;
-  private reloadT = 0;
-  private burstLeft = 0;
-  private burstCool = 0.4;
-  private shotT = 0;
-  private settle = 0;
-  private aimT = 0;
-  private aimPitch = 0;
-  private aimBlend = 0;
-  private suppress = 0;
-  private flinch = 0;
-  private grenades: number;
-  private grenadeCool = rand(5, 10);
-  private meleeCool = 0;
-  private reactT = 0;
-  private thinkT = Math.random() * 0.3;
-  private searchT = 0;
-  private homeX = 0;
-  private homeZ = 0;
-  private homeYaw = 0;
-  private lookT = Math.random() * 10;
-  private deathT = 0;
-  private deathKind = 0;
-  private deathVX = 0;
-  private deathVY = 0;
-  private deathVZ = 0;
-  private burnT = 0;
-  private stuck = 0;
-  private peekBack: { x: number; z: number } | null = null;
+  protected crouchT = 0;
+  protected fixedY: number | null = null;
+  protected alert = 0;
+  protected lastSeen = new THREE.Vector3();
+  protected sinceSeen = 99;
+  protected path: number[] = [];
+  protected pathI = 0;
+  protected goal: { x: number; z: number } | null = null;
+  protected needPath = false;
+  protected speedNow = 0;
+  protected phase = Math.random() * 6;
+  protected patrol: number[] | undefined;
+  protected patrolI = 0;
+  protected waitT = 0;
+  protected cover: CoverPoint | null = null;
+  protected action: Action = 'hold';
+  protected actionT = 0;
+  protected ammo: number;
+  protected reloadT = 0;
+  protected burstLeft = 0;
+  protected burstCool = 0.4;
+  protected shotT = 0;
+  protected settle = 0;
+  protected aimT = 0;
+  protected aimPitch = 0;
+  protected aimBlend = 0;
+  protected suppress = 0;
+  protected flinch = 0;
+  protected grenades: number;
+  protected grenadeCool = rand(5, 10);
+  protected meleeCool = 0;
+  protected reactT = 0;
+  protected thinkT = Math.random() * 0.3;
+  protected searchT = 0;
+  protected homeX = 0;
+  protected homeZ = 0;
+  protected homeYaw = 0;
+  protected lookT = Math.random() * 10;
+  protected deathT = 0;
+  protected deathKind = 0;
+  protected deathVX = 0;
+  protected deathVY = 0;
+  protected deathVZ = 0;
+  protected burnT = 0;
+  protected stuck = 0;
+  protected peekBack: { x: number; z: number } | null = null;
 
-  constructor(private readonly game: Game, type: string, x: number, y: number, z: number, yaw: number, o: { group: string; patrol?: number[]; hold?: boolean; crouch?: boolean; weapon?: string; id?: string; fixedY?: boolean }) {
+  constructor(protected readonly game: Game, type: string, x: number, y: number, z: number, yaw: number, o: { group: string; patrol?: number[]; hold?: boolean; crouch?: boolean; weapon?: string; id?: string; fixedY?: boolean }) {
+    this.mark = game.player;
     this.arch = ARCHETYPES[type] ?? ARCHETYPES.rifleman;
     this.weapon = getWeapon(o.weapon ?? this.arch.weapon);
     this.hp = this.arch.hp;
@@ -265,6 +284,28 @@ export class Enemy {
   get eyeY(): number {
     return this.pos.y + lerp(1.6, 1.05, this.crouchT) * this.arch.scale;
   }
+  get eyeHeight(): number {
+    return lerp(1.6, 1.05, this.crouchT) * this.arch.scale;
+  }
+  get height(): number {
+    return lerp(1.78, 1.2, this.crouchT) * this.arch.scale;
+  }
+  get speed(): number {
+    return this.speedNow;
+  }
+
+  /** How well this soldier shoots compared with its archetype. Difficulty scales the enemy's aim. */
+  protected skill(): number {
+    return DIFFICULTY[store.settings.difficulty].enemyAcc;
+  }
+
+  /** How fast to move along the current path. */
+  protected pace(): number {
+    return this.state === 'combat' ? this.arch.speed * (this.crouched ? 0.45 : 1) * (this.burnT > 0 ? 1.2 : 1) : this.state === 'patrol' ? 1.45 : 2.8;
+  }
+
+  /** Called when a round this soldier fired kills someone. */
+  onKill(): void {}
 
   /** Ray test against head / torso / legs. Returns the distance (or -1) and sets `outPart`. */
   hitTest(ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, maxT: number, out: { part: BodyPart }): number {
@@ -359,7 +400,7 @@ export class Enemy {
     }
   }
 
-  private die(fromX: number, fromZ: number, blast: boolean): void {
+  protected die(fromX: number, fromZ: number, blast: boolean): void {
     this.alive = false;
     this.hp = 0;
     this.releaseCover();
@@ -413,7 +454,7 @@ export class Enemy {
     }
   }
 
-  private perceive(tick: number): void {
+  protected perceive(tick: number): void {
     const g = this.game;
     const p = g.player;
     const ex = this.pos.x;
@@ -436,10 +477,36 @@ export class Enemy {
         if (see && g.combat.smokeBlocks(ex, ey, ez, p.pos.x, p.pos.y + 1, p.pos.z)) see = false;
       }
     }
+    // In a fight the player's squad are targets too. Out of one they go unnoticed: only the player
+    // can give the squad away.
+    let mark: Mark = p;
+    const squad = g.squad.list;
+    if (this.state === 'combat' && this.stunT <= 0 && squad.length) {
+      this.markT -= tick;
+      if (this.markT <= 0 || (this.markAlly === null && !see)) {
+        this.markT = rand(2, 4.5);
+        // Whoever is nearest and in view; the player unless a squad member is clearly closer.
+        let best: Mark | null = null;
+        let bd = see ? d * 0.85 : 42 * this.arch.sight;
+        for (const a of squad) {
+          const ad = Math.hypot(a.pos.x - ex, a.pos.z - ez);
+          if (ad < bd && g.world.los(ex, ey, ez, a.pos.x, a.pos.y + 1.25, a.pos.z, F_SIGHT)) {
+            best = a;
+            bd = ad;
+          }
+        }
+        this.markAlly = best;
+      } else if (this.markAlly && !g.world.los(ex, ey, ez, this.markAlly.pos.x, this.markAlly.pos.y + 1.25, this.markAlly.pos.z, F_SIGHT)) this.markAlly = null;
+      if (this.markAlly) {
+        mark = this.markAlly;
+        see = true;
+      }
+    } else this.markAlly = null;
+    this.mark = mark;
     this.canSee = see;
     if (this.state === 'combat') {
       if (see) {
-        this.lastSeen.copy(p.pos);
+        this.lastSeen.copy(mark.pos);
         this.sinceSeen = 0;
       } else this.sinceSeen += tick;
       return;
@@ -465,19 +532,19 @@ export class Enemy {
 
   // ------------------------------------------------------------------ decisions
 
-  private goTo(x: number, z: number): void {
+  protected goTo(x: number, z: number): void {
     this.goal = { x, z };
     this.needPath = true;
     this.stuck = 0;
   }
 
-  private releaseCover(): void {
+  protected releaseCover(): void {
     if (this.cover && this.cover.taken === this.id) this.cover.taken = 0;
     this.cover = null;
     this.peekBack = null;
   }
 
-  private findCover(px: number, pz: number): CoverPoint | null {
+  protected findCover(px: number, pz: number): CoverPoint | null {
     const nav = this.game.nav;
     const [rMin, rPref, rMax] = this.arch.range;
     let best: CoverPoint | null = null;
@@ -503,7 +570,7 @@ export class Enemy {
     return best;
   }
 
-  private chooseAction(d: number): void {
+  protected chooseAction(d: number): void {
     const g = this.game;
     const a = this.arch;
     const [rMin, rPref, rMax] = a.range;
@@ -550,7 +617,7 @@ export class Enemy {
     void g;
   }
 
-  private think(tick: number): void {
+  protected think(tick: number): void {
     const g = this.game;
     this.perceive(tick);
     if (this.stunT > 0) return;
@@ -580,7 +647,7 @@ export class Enemy {
           for (const s of Math.random() < 0.5 ? [1, -1] : [-1, 1]) {
             const sx = c.x - c.nz * s * 1.5;
             const sz = c.z + c.nx * s * 1.5;
-            if (g.nav.walkable(sx, sz) && g.world.los(sx, this.pos.y + 1.5, sz, p.pos.x, p.pos.y + 1.2, p.pos.z, F_SIGHT)) {
+            if (g.nav.walkable(sx, sz) && g.world.los(sx, this.pos.y + 1.5, sz, this.mark.pos.x, this.mark.pos.y + 1.2, this.mark.pos.z, F_SIGHT)) {
               this.peekBack = { x: c.x, z: c.z };
               this.action = 'peek';
               this.goTo(sx, sz);
@@ -603,7 +670,7 @@ export class Enemy {
       // Rifle butt at arm's length.
       this.meleeCool -= tick;
       const dp = Math.hypot(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
-      if (this.canSee && dp < 1.7 && this.meleeCool <= 0 && Math.abs(p.pos.y - this.pos.y) < 1.5) {
+      if (this.canSee && this.mark === p && dp < 1.7 && this.meleeCool <= 0 && Math.abs(p.pos.y - this.pos.y) < 1.5) {
         this.meleeCool = 1.3;
         this.flinch = 0.6;
         p.damage(24, this.pos.x, this.pos.z, 'melee');
@@ -641,7 +708,7 @@ export class Enemy {
     }
   }
 
-  private throwGrenade(d: number): void {
+  protected throwGrenade(d: number): void {
     const g = this.game;
     const dx = this.lastSeen.x - this.pos.x;
     const dz = this.lastSeen.z - this.pos.z;
@@ -690,7 +757,7 @@ export class Enemy {
     if (!far || g.engine.frame % 4 === 0) this.animate(dt, false);
   }
 
-  private move(dt: number): void {
+  protected move(dt: number): void {
     const g = this.game;
     const nav = g.nav;
     let moving = false;
@@ -721,7 +788,7 @@ export class Enemy {
         } else {
           dx /= dist;
           dz /= dist;
-          const speed = this.state === 'combat' ? this.arch.speed * (this.crouched ? 0.45 : 1) * (this.burnT > 0 ? 1.2 : 1) : this.state === 'patrol' ? 1.45 : 2.8;
+          const speed = this.pace();
           // Keep a little distance from squad mates.
           const push = g.enemies.separation(this, v);
           const step = speed * dt;
@@ -754,6 +821,8 @@ export class Enemy {
       }
     }
     if (!moving) this.speedNow = damp(this.speedNow, 0, 12, dt);
+    this.vel.x = moving ? faceX * this.speedNow : 0;
+    this.vel.z = moving ? faceZ * this.speedNow : 0;
     if (this.fixedY === null) this.pos.y = damp(this.pos.y, nav.heightAt(this.pos.x, this.pos.z), 14, dt);
 
     // Facing
@@ -778,7 +847,7 @@ export class Enemy {
     this.yaw = dampAngle(this.yaw, want, rate, dt);
   }
 
-  private fireControl(dt: number): void {
+  protected fireControl(dt: number): void {
     const g = this.game;
     const a = this.arch;
     const w = this.weapon;
@@ -792,7 +861,7 @@ export class Enemy {
       this.reactT -= dt;
       return;
     }
-    const p = g.player;
+    const p = this.mark;
     const tx = this.canSee ? p.pos.x : this.lastSeen.x;
     const ty = this.canSee ? p.pos.y + p.eyeHeight * 0.74 : this.lastSeen.y + 1.1;
     const tz = this.canSee ? p.pos.z : this.lastSeen.z;
@@ -845,8 +914,7 @@ export class Enemy {
     ax /= al;
     ay /= al;
     az /= al;
-    const diff = DIFFICULTY[store.settings.difficulty];
-    const err = ((a.accuracy / diff.enemyAcc) * (2.7 - 1.7 * this.settle) * (1 + this.suppress * 1.4) * (this.speedNow > 0.5 ? 1.6 : 1) * (this.crouched ? 0.85 : 1) * (1 + p.speed * 0.07) + w.moa / 60) * DEG;
+    const err = ((a.accuracy / this.skill()) * (2.7 - 1.7 * this.settle) * (1 + this.suppress * 1.4) * (this.speedNow > 0.5 ? 1.6 : 1) * (this.crouched ? 0.85 : 1) * (1 + p.speed * 0.07) + w.moa / 60) * DEG;
     const n = w.pellets;
     for (let i = 0; i < n; i++) {
       const e = n > 1 ? err + w.pattern * DEG : err;
@@ -860,8 +928,10 @@ export class Enemy {
       const sy = ay + oy;
       const sz = az + (rz / rl) * ox;
       const sl = Math.hypot(sx, sy, sz);
-      g.combat.fire(w, mx, my, mz, sx / sl, sy / sl, sz / sl, false, this);
+      g.combat.fire(w, mx, my, mz, sx / sl, sy / sl, sz / sl, false, this, this.friendly ? 0.45 : 1, this.friendly);
     }
+    // The enemy hears the squad's gunfire as it hears the player's.
+    if (this.friendly) g.enemies.hearNoise(mx, my, mz, w.suppressed ? 9 : 48, true);
     g.audio.play(w.sound, { x: mx, y: my, z: mz, ref: w.suppressed ? 5 : 15, vol: 0.85 });
     g.fx.muzzle(mx, my, mz, ax, ay, az, w.energy > 2400 ? 1.2 : 0.9, w.suppressed);
     this.flinch = Math.min(1, this.flinch + 0.12);
@@ -877,7 +947,7 @@ export class Enemy {
 
   // ------------------------------------------------------------------ animation
 
-  private animate(dt: number, force: boolean): void {
+  protected animate(dt: number, force: boolean): void {
     void dt;
     void force;
     const b = this.bones;
@@ -932,7 +1002,7 @@ export class Enemy {
     }
   }
 
-  private updateDeath(dt: number): void {
+  protected updateDeath(dt: number): void {
     if (this.corpse) return;
     this.deathT += dt;
     const t = clamp(this.deathT / 0.62, 0, 1);
