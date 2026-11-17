@@ -930,6 +930,8 @@ class AudioSys {
     this.listed = true;
     for (const n of this.wanted) first.add(n);
     this.wanted.clear();
+    // Weather that was asked for before the list arrived can start now.
+    if (this.wantAmb.length) this.setAmbience(this.wantAmb, this.battle);
     await Promise.all([...first].map((n) => this.loadSound(n)));
   }
 
@@ -1135,19 +1137,33 @@ class AudioSys {
     this.battle = battle;
     const c = this.ctx;
     if (!c) return;
-    for (const l of this.loops) {
-      l.gain.gain.setTargetAtTime(0, c.currentTime, 0.4);
-      l.src.stop(c.currentTime + 2);
-    }
-    this.loops = [];
     const keep = new Set(names.map((name) => name.split(':')[0]));
+    // Loops already running carry on untouched: this is called again whenever a recording arrives.
+    const running = new Map<string, Loop>();
+    for (const l of this.loops) {
+      if (keep.has(l.name) && !running.has(l.name)) running.set(l.name, l);
+      else {
+        l.gain.gain.setTargetAtTime(0, c.currentTime, 0.4);
+        l.src.stop(c.currentTime + 2);
+      }
+    }
+    this.loops = [...running.values()];
     for (const sound of this.onFile.keys()) if (sound.startsWith('amb') && !keep.has(sound)) this.release(sound);
     for (const name of names) {
       const [n, v] = name.split(':');
-      // A recorded loop that is still being fetched starts when it arrives (loadSound calls back here).
-      if (!this.samples.has(n) && (this.onFile.has(n) || !this.listed)) {
+      const level = v ? parseFloat(v) : 0.5;
+      const live = running.get(n);
+      if (live) {
+        live.gain.gain.setTargetAtTime(level, c.currentTime, 0.8);
+        continue;
+      }
+      // Until the list of recordings has arrived nobody knows whether this loop is recorded or
+      // generated; loadSamples calls back here when it has. A recorded loop still being fetched
+      // starts when it arrives (loadSound calls back too).
+      if (!this.listed && this.samplesAsked) continue;
+      if (this.onFile.has(n) && !this.samples.has(n)) {
         this.prepare(n);
-        if (this.onFile.has(n) || onDemand(n)) continue;
+        continue;
       }
       const buf = this.buffer(n);
       if (!buf) continue;
@@ -1156,7 +1172,7 @@ class AudioSys {
       src.loop = true;
       const gain = c.createGain();
       gain.gain.value = 0;
-      gain.gain.setTargetAtTime(v ? parseFloat(v) : 0.5, c.currentTime, 0.8);
+      gain.gain.setTargetAtTime(level, c.currentTime, 0.8);
       src.connect(gain).connect(this.ambBus);
       src.start();
       this.loops.push({ src, gain, name: n });
